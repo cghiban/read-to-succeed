@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="/static/styles.css">
+
+        <title>Read to Succeed</title>
+    </head>
+  <body>
+    <div class="welcome-center">Pick a reader 
+      <select id="readers">
+  {{ range .Readers}}
+      <option value="{{.}}">{{.}}</option>
+  {{ end}}
+      </select>
+      <a href="#" id="addentry">add reading</a>
+    </div>
+
+<table>
+  <tr>
+    <th>#</th>
+    <th>Reader</th>
+    <th>Author</th>
+    <th>Title</th>
+    <th>Day</th>
+    <th>Duration</th>
+    <th>Added on</th>
+  </th>
+{{ range .Readings}}
+<tr>
+    <td>{{.ID}}</td>
+    <td>{{.ReaderName}}</td>
+    <td>{{.BookAuthor}}</td>
+    <td>{{.BookTitle}}</td>
+    <td>{{.Day}}</td>
+    <td>{{.Duration}}m</td>
+    <td>{{.CreatedOn}}</td>
+</tr>
+{{ end }}
+</table>
+
+    <!-- The Modal -->
+    <div id="myModal" class="modal">
+      <!-- Modal content -->
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Add new reading</h3>
+        <form>
+          <div>
+            <label>Reader</label>
+            <input type="text" name="reader" readonly required>
+          </div>
+          <div>
+            <label>Book Author</label>
+            <input type="text" name="author" required>
+          </div>
+          <div>
+            <label>Book Title</label>
+            <input type="text" name="author" required>
+          </div>
+          <div>
+            <label>Date</label>
+            <input type="date" name="day" required>
+          </div>
+          <div>
+            <label>Duration</label>
+            <input type="number" min="1" max="60" name="duration" required>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+  <script type="text/javascript" src="/static/scripts.js"></script>
+  </body>
+</html>
