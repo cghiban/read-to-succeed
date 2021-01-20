@@ -13,7 +13,7 @@ type DataStore struct {
 	l  *log.Logger
 }
 
-func (ds *DataStore) AddVideo(r *Reading) error {
+func (ds *DataStore) AddReading(r *Reading) error {
 	query := `                                                                                      
         INSERT INTO readings (reader, book_author, book_title, day, duration, created)                                  
         VALUES (?, ?, ?, ?, ?, datetime('now','localtime'))                                                                         
@@ -56,16 +56,18 @@ func (ds *DataStore) ListReadings() ([]Reading, error) {
 	defer rows.Close()
 	var r Reading
 
-	var day, created, duration string
+	//var day, created, duration string
+	var created string
 	for rows.Next() {
-		rows.Scan(&r.ID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &day, &duration, &created)
+		//rows.Scan(&r.ID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &day, &duration, &created)
+		rows.Scan(&r.ID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &r.Day, &r.Duration, &created)
 
 		//ds.l.Println(day, duration, created)
 		t, _ := time.Parse("2006-01-02T15:04:05Z", created)
 		r.CreatedOn = t
-		t, _ = time.Parse("2006-01-02T00:00:00Z", day)
+		/*t, _ = time.Parse("2006-01-02T00:00:00Z", day)
 		r.Day = t
-		r.Duration, _ = time.ParseDuration(duration)
+		r.Duration, _ = time.ParseDuration(duration)*/
 
 		//ds.l.Println(r)
 		readings = append(readings, r)

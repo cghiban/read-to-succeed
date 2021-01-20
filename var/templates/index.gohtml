@@ -27,16 +27,16 @@
     <th>Day</th>
     <th>Duration</th>
     <th>Added on</th>
-  </th>
+  </tr>
 {{ range .Readings}}
 <tr>
     <td>{{.ID}}</td>
     <td>{{.ReaderName}}</td>
     <td>{{.BookAuthor}}</td>
     <td>{{.BookTitle}}</td>
-    <td>{{.Day}}</td>
+    <td>{{dayToDate .Day}}</td>
     <td>{{.Duration}}m</td>
-    <td>{{.CreatedOn}}</td>
+    <td>{{dateISOish .CreatedOn}}</td>
 </tr>
 {{ end }}
 </table>
@@ -50,7 +50,13 @@
         <form>
           <div>
             <label>Reader</label>
-            <input type="text" name="reader" readonly required>
+            <!--<input type="text" name="reader" readonly required>-->
+            <select name="reader" required>
+              <option value="">-= pick a reader =-</option>
+              {{ range .Readers}}
+              <option value="{{.}}">{{.}}</option>
+              {{ end}}
+            </select>
           </div>
           <div>
             <label>Book Author</label>
@@ -58,15 +64,19 @@
           </div>
           <div>
             <label>Book Title</label>
-            <input type="text" name="author" required>
+            <input type="text" name="title" required>
           </div>
           <div>
             <label>Date</label>
-            <input type="date" name="day" required>
+            <input type="date" name="day" required value="{{.Today}}">
           </div>
           <div>
             <label>Duration</label>
             <input type="number" min="1" max="60" name="duration" required>
+          </div>
+          <div>
+            <label></label>
+            <button>submit</button>
           </div>
         </form>
       </div>

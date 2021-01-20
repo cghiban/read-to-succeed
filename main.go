@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -25,28 +26,15 @@ var readers = env.String("READERS", true, "", "list of readers (comma sepparated
 //var bindPort = env.Integer("BIND_Port",true,0,"bind port for server, i.e. 9090")
 
 type Reading struct {
-	ID         uint   `json:"id"`
-	ReaderName string `json:"reader"`
-	BookAuthor string `json:"author"`
-	BookTitle  string
-	Day        time.Time
-	Duration   time.Duration
-	CreatedOn  time.Time
+	ID         uint      `json:"id,omitempty"`
+	ReaderName string    `json:"reader"`
+	BookAuthor string    `json:"author"`
+	BookTitle  string    `json:"title"`
+	Day        string    `json:"day"`
+	Duration   int       `json:"duration"`
+	CreatedOn  time.Time `json:-`
 }
 
-/*var readings = []*Reading{
-	&Reading{
-		ID:         1,
-		ReaderName: "Cornel",
-		BookAuthor: "Ion Iliescu",
-		BookTitle:  "Măi animalelor",
-		Day:        time.Date(2009, time.November, 10, 0, 0, 0, 0, time.Local),
-		Duration:   2,
-		CreatedOn:  time.Now(),
-	},
-}*/
-
-// initialize our db
 func init() {
 	err := env.Parse()
 	if err != nil {
@@ -54,7 +42,19 @@ func init() {
 		os.Exit(1)
 	}
 
-	templates = template.Must(template.ParseGlob("var/templates/*.gohtml"))
+	// init template
+	funcMap := template.FuncMap{
+		"dayToDate": func(s string) string {
+			t, err := time.Parse("2006-01-02", s)
+			if err != nil {
+				return ""
+			}
+			return t.Format("Jan 2, 2006")
+		},
+		"dateISOish": func(t time.Time) string { return t.Format("2006-01-02 3:04p") },
+	}
+	templates = template.Must(template.New("tmpls").Funcs(funcMap).ParseGlob("var/templates/*.gohtml"))
+	//templates = templates.Funcs(funcMap)
 
 	//db := InitDB(*dbPath)
 	db, err := sql.Open("sqlite3", *dbPath) // Open the created SQLite File
@@ -82,7 +82,7 @@ func main() {
 	//sm.Handle("/goodbye", gh)
 	sm.HandleFunc("/", index)
 	sm.HandleFunc("/add", addReading)
-	sm.HandleFunc("/list", listReadings)
+	//sm.HandleFunc("/list", listReadings)
 	sm.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("var/static/"))))
 
 	s := &http.Server{
@@ -123,9 +123,11 @@ func index(rw http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Readers  []string
 		Readings []Reading
+		Today    string
 	}{
 		Readers:  strings.Split(*readers, ","),
 		Readings: readings,
+		Today:    time.Now().Format("2006-01-02"),
 	}
 
 	if err := templates.ExecuteTemplate(rw, "index.gohtml", data); err != nil {
@@ -134,9 +136,47 @@ func index(rw http.ResponseWriter, r *http.Request) {
 }
 
 func addReading(rw http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(rw, "Invalid request", http.StatusBadRequest)
+		return
+	}
 
-}
+	contentType := r.Header["Content-Type"]
+	log.Println(contentType, len(contentType) == 1, contentType[0])
 
-func listReadings(rw http.ResponseWriter, r *http.Request) {
+	if len(contentType) == 1 && contentType[0] == "application/json" {
 
+		decoder := json.NewDecoder(r.Body)
+		defer r.Body.Close()
+
+		reading := &Reading{}
+		err := decoder.Decode(reading)
+		if err != nil {
+			log.Println(err)
+			http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+			return
+		}
+
+		log.Println(reading)
+		err = dataStore.AddReading(reading)
+		if err != nil {
+			log.Println(err)
+			http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+			return
+		}
+
+		//fmt.Fprintf(rw, "{s}")
+		rw.Write([]byte("{\"status\":\"ok\"}"))
+		return
+	}
+
+	err := r.ParseMultipartForm(10000)
+	if r.Method != http.MethodPost {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	data := r.PostForm
+	log.Printf("form data: %#v", data)
+	rw.Write([]byte("[1,2,3]"))
 }
