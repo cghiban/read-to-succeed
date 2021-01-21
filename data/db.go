@@ -1,4 +1,4 @@
-package main
+package data
 
 import (
 	"database/sql"
@@ -8,9 +8,19 @@ import (
 	_ "github.com/mattn/go-sqlite3" // Import go-sqlite3 library
 )
 
+type Reading struct {
+	ID         uint      `json:"id,omitempty"`
+	ReaderName string    `json:"reader"`
+	BookAuthor string    `json:"author"`
+	BookTitle  string    `json:"title"`
+	Day        string    `json:"day"`
+	Duration   int       `json:"duration"`
+	CreatedOn  time.Time `json:-`
+}
+
 type DataStore struct {
 	DB *sql.DB
-	l  *log.Logger
+	L  *log.Logger
 }
 
 func (ds *DataStore) AddReading(r *Reading) error {
@@ -30,7 +40,7 @@ func (ds *DataStore) AddReading(r *Reading) error {
 		return err
 	}
 	rowNum, _ := res.RowsAffected()
-	ds.l.Println(" -- added videos to DB: ", rowNum)
+	ds.L.Println(" -- added videos to DB: ", rowNum)
 
 	id, err := res.LastInsertId()
 	if err != nil {
