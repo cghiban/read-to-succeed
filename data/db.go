@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
@@ -24,7 +25,7 @@ type DataStore struct {
 }
 
 func (ds *DataStore) AddReading(r *Reading) error {
-	query := `                                                                                      
+	query := `
         INSERT INTO readings (reader, book_author, book_title, day, duration, created)                                  
         VALUES (?, ?, ?, ?, ?, datetime('now','localtime'))                                                                         
     `
@@ -51,15 +52,29 @@ func (ds *DataStore) AddReading(r *Reading) error {
 	return nil
 }
 
-func (ds *DataStore) ListReadings() ([]Reading, error) {
-	query := `                                                                                      
+// ListReadings - retrieves all records or of the given reader passed as args
+func (ds *DataStore) ListReadings(args ...string) ([]Reading, error) {
+	readings := []Reading{}
+	queryFmt := `
         SELECT id, reader, book_author, book_title, day, duration, created
-        FROM readings
+        FROM readings %s
         ORDER BY id desc
     `
-	readings := []Reading{}
+	var query string
+	var rows *sql.Rows
+	var err error
+	if len(args) == 1 && args[0] != "" {
+		where := "WHERE reader = ?"
+		query = fmt.Sprintf(queryFmt, where)
+		rows, err = ds.DB.Query(query, args[0])
+	} else {
+		query = fmt.Sprintf(queryFmt, "")
+		rows, err = ds.DB.Query(query)
+	}
 
-	rows, err := ds.DB.Query(query)
+	// fmt.Println(query, args[0])
+	// fmt.Printf("%#v", args)
+
 	if err != nil {
 		return readings, err
 	}

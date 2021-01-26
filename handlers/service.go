@@ -38,7 +38,8 @@ func NewService(l *log.Logger, store *data.DataStore, readers *string) *Service 
 }
 
 func (s *Service) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	log.Println("path:", r.URL.Path)
+	//log.Println("path:", r.URL.Path)
+
 	//uri := r.URL.Path
 	if r.Method == http.MethodGet {
 		s.GetReadings(rw, r)
@@ -55,7 +56,13 @@ func (s *Service) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
-	readings, err := s.store.ListReadings()
+
+	log.Println("query:", r.URL.Query())
+
+	reader := r.URL.Query().Get("reader")
+	log.Printf("reader: [%s]", reader)
+
+	readings, err := s.store.ListReadings(reader)
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -63,13 +70,15 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		Readers  []string
-		Readings []data.Reading
-		Today    string
+		CurrentReader string
+		Readers       []string
+		Readings      []data.Reading
+		Today         string
 	}{
-		Readers:  strings.Split(*s.readers, ","),
-		Readings: readings,
-		Today:    time.Now().Format("2006-01-02"),
+		CurrentReader: reader,
+		Readers:       strings.Split(*s.readers, ","),
+		Readings:      readings,
+		Today:         time.Now().Format("2006-01-02"),
 	}
 
 	if err := s.t.ExecuteTemplate(rw, "index.gohtml", data); err != nil {

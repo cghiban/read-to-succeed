@@ -51,13 +51,8 @@ func main() {
 	r2sservice := handlers.NewService(l, dataStore, readers)
 	sm.Handle("/", r2sservice)
 	sm.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("var/static/"))))
+	sm.Handle("/favicon.ico", http.NotFoundHandler())
 
-	/*
-		sm.HandleFunc("/", index)
-		sm.HandleFunc("/add", addReading)
-		//sm.HandleFunc("/list", listReadings)
-
-	*/
 	s := &http.Server{
 		Addr:         *bindAddress,
 		Handler:      sm,

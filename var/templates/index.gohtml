@@ -11,35 +11,43 @@
   <body>
     <div class="welcome-center">Pick a reader 
       <select id="readers">
-  {{ range .Readers}}
-      <option value="{{.}}">{{.}}</option>
-  {{ end}}
+  {{- $cr := .CurrentReader -}}
+      <option value="">-= pick a reader =-</option>
+  {{ range .Readers -}}
+      <option value="{{.}}" {{if eq . $cr}}selected{{end}}>{{.}}</option>
+  {{ end }}
       </select>
       <a href="#" id="addentry">add reading</a>
     </div>
 
-<table>
+<div style="overflow-x:auto;">
+  <table>
+    <thead>
+    <tr>
+      <th>#</th>
+      <th>Reader</th>
+      <th>Author</th>
+      <th>Title</th>
+      <th>Day</th>
+      <th>Duration</th>
+      <th>Added on</th>
+    </tr>
+    </thead>
+    <tbody>
+  {{ range .Readings}}
   <tr>
-    <th>#</th>
-    <th>Reader</th>
-    <th>Author</th>
-    <th>Title</th>
-    <th>Day</th>
-    <th>Duration</th>
-    <th>Added on</th>
+      <td>{{.ID}}</td>
+      <td>{{.ReaderName}}</td>
+      <td>{{.BookAuthor}}</td>
+      <td>{{.BookTitle}}</td>
+      <td>{{dayToDate .Day}}</td>
+      <td>{{.Duration}}m</td>
+      <td>{{dateISOish .CreatedOn}}</td>
   </tr>
-{{ range .Readings}}
-<tr>
-    <td>{{.ID}}</td>
-    <td>{{.ReaderName}}</td>
-    <td>{{.BookAuthor}}</td>
-    <td>{{.BookTitle}}</td>
-    <td>{{dayToDate .Day}}</td>
-    <td>{{.Duration}}m</td>
-    <td>{{dateISOish .CreatedOn}}</td>
-</tr>
-{{ end }}
-</table>
+  {{ end }}
+  <tbody>
+  </table>
+</div>
 
     <!-- The Modal -->
     <div id="myModal" class="modal">

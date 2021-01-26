@@ -8,12 +8,22 @@ let modal = document.querySelector("#myModal"),
     day = document.querySelector('input[name=day]'),
     duration = document.querySelector('input[name=duration]');
 
-document.querySelector("#addentry").addEventListener('click', e => {
+document.querySelector("#addentry").addEventListener('click', (ev) => {
     reader.value = readers.value;
     modal.style.display = "block";
 });
 
-document.querySelector('button').addEventListener('click', function (ev) {
+readers.addEventListener("change", (ev) => {
+    let v = ev.target.value;
+    if (v === "") {
+        document.location.href = "/";
+    }
+    else {
+        document.location.href = "/?reader=" + v;
+    }
+});
+
+document.querySelector('button').addEventListener('click', (ev) => {
     let form = document.querySelector('form'),
     formData = new FormData(form);
     console.log('valid: ', form.checkValidity());
