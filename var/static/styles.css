@@ -94,7 +94,7 @@ only screen and (max-width: 760px)/*,
   width: max-content;
 }
 
-.modal-content label {
+.modal-content label, form label {
   width: 90px;
   display: inline-block;
 }
@@ -114,3 +114,7 @@ only screen and (max-width: 760px)/*,
   cursor: pointer;
 }
 
+
+.message {
+  background-color: pink;
+}

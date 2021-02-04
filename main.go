@@ -12,6 +12,7 @@ import (
 	"read2succeed/handlers"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/nicholasjackson/env"
 )
 
@@ -46,11 +47,25 @@ func main() {
 
 	l.Println("about to start server on ", *bindAddress)
 
-	sm := http.NewServeMux()
-
 	r2sservice := handlers.NewService(l, dataStore, readers)
-	sm.Handle("/", r2sservice)
-	sm.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("var/static/"))))
+
+	//sm := http.NewServeMux()
+	sm := mux.NewRouter()
+	getRouter := sm.Methods("GET").Subrouter()
+	getRouter.HandleFunc("/", r2sservice.GetReadings)
+
+	postRouter := sm.Methods("POST").Subrouter()
+	postRouter.HandleFunc("/add", r2sservice.AddReading)
+
+	sm.HandleFunc("/register", r2sservice.UserSignUp)
+	sm.HandleFunc("/login", r2sservice.UserLogIn)
+	sm.HandleFunc("/logout", r2sservice.UserLogOut)
+
+	sm.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("var/static/"))))
+
+	//sm.Handle("/", r2sservice)
+	//sm.Handle("/readings/", r2sservice)
+	//sm.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("var/static/"))))
 	sm.Handle("/favicon.ico", http.NotFoundHandler())
 
 	s := &http.Server{

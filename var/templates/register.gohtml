@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="/static/styles.css">
+
+        <title>Sign Up - Read to Succeed</title>
+    </head>
+  <body>
+    <div class="welcome-center">
+        <h1>Sign Up</h1>
+    </div>
+
+    <form method="POST" action="/register">
+        <div>
+            <label>Your Name</label>
+            <input type="text" name="name" required>
+        </div>
+        <div>
+            <label>Email</label>
+            <input type="text" name="email" required>
+        </div>
+        <div>
+            <label>Password</label>
+            <input type="password" name="password" required>
+        </div>
+        <div>
+            <label></label>
+            <button>submit</button>
+        </div>
+    </form>
+  </body>
+</html>

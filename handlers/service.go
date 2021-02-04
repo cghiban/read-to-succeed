@@ -8,6 +8,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/gorilla/sessions"
 )
 
 // Service data struct
@@ -15,6 +17,7 @@ type Service struct {
 	l       *log.Logger
 	store   *data.DataStore
 	readers *string
+	session *sessions.CookieStore
 	t       *template.Template
 }
 
@@ -34,35 +37,38 @@ func NewService(l *log.Logger, store *data.DataStore, readers *string) *Service 
 	templates := template.Must(template.New("tmpls").Funcs(funcMap).ParseGlob("var/templates/*.gohtml"))
 	//templates = templates.Funcs(funcMap)
 
-	return &Service{l: l, store: store, t: templates, readers: readers}
-}
-
-func (s *Service) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	//log.Println("path:", r.URL.Path)
-
-	//uri := r.URL.Path
-	if r.Method == http.MethodGet {
-		s.GetReadings(rw, r)
-		return
+	session := sessions.NewCookieStore([]byte("secret-password"))
+	session.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   86400 * 7,
+		HttpOnly: true,
 	}
 
-	if r.Method == http.MethodPost {
-		s.AddReading(rw, r)
-		return
-	}
-
-	// catch all
-	rw.WriteHeader(http.StatusMethodNotAllowed)
+	return &Service{l: l, store: store, t: templates, readers: readers, session: session}
 }
 
+// GetReadings - list user's/users' read books
 func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 
-	log.Println("query:", r.URL.Query())
+	session, err := s.session.Get(r, "session")
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	isLoggedIn := s.IsLoggedIn(r)
+	if !isLoggedIn {
+		http.Redirect(rw, r, "/login", http.StatusFound)
+		return
+	}
 
 	reader := r.URL.Query().Get("reader")
-	log.Printf("reader: [%s]", reader)
+	//userIDv := session.Values["user_id"]
+	//userID := userIDv.(int)
+	userID := session.Values["user_id"].(int)
+	//fmt.Printf("userID: %T\t%q", userID, userID)
 
-	readings, err := s.store.ListReadings(reader)
+	readings, err := s.store.ListUserReadings(userID, reader)
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -95,6 +101,13 @@ func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 	contentType := r.Header["Content-Type"]
 	log.Println(contentType, len(contentType) == 1, contentType[0])
 
+	if !s.IsLoggedIn(r) {
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+
+	session, _ := s.session.Get(r, "session")
+
 	if len(contentType) == 1 && contentType[0] == "application/json" {
 
 		decoder := json.NewDecoder(r.Body)
@@ -108,6 +121,9 @@ func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		userIDv := session.Values["user_id"]
+		userID, _ := userIDv.(int)
+		reading.UserID = userID
 		log.Println(reading)
 		err = s.store.AddReading(reading)
 		if err != nil {
@@ -116,12 +132,11 @@ func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//fmt.Fprintf(rw, "{s}")
 		rw.Write([]byte("{\"status\":\"ok\"}"))
 		return
 	}
 
-	err := r.ParseMultipartForm(10000)
+	err := r.ParseMultipartForm(1_000)
 	if r.Method != http.MethodPost {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
