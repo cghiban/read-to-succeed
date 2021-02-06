@@ -17,7 +17,17 @@
       <option value="{{.}}" {{if eq . $cr}}selected{{end}}>{{.}}</option>
   {{ end }}
       </select>
-      <a href="#" id="addentry">add reading</a>
+      <a href="#" id="addentry" title="add reading">+</a>
+      <a href="#" id="togglestats">stats</a>
+    </div>
+
+    <div id="stats">
+    Totals:
+      <ul>
+      {{ range .Stats -}}
+        <li><label>{{ .ReaderName }}</label> {{ .TotalDuration }}</li>
+      {{ end }}
+      </ul>
     </div>
 
 <div style="overflow-x:auto;">

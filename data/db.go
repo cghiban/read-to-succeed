@@ -33,7 +33,7 @@ func (u AuthUser) CheckPasswd(rawPass string) bool {
 // Reading - type for handling readings data
 type Reading struct {
 	ID         int       `json:"id,omitempty"`
-	UserID     int       `json:"user_id",omitempty`
+	UserID     int       `json:"user_id,omitempty"`
 	ReaderName string    `json:"reader"`
 	BookAuthor string    `json:"author"`
 	BookTitle  string    `json:"title"`
@@ -48,6 +48,7 @@ type DataStore struct {
 	L  *log.Logger
 }
 
+// CreateUser - add new user into db
 func (ds *DataStore) CreateUser(u *AuthUser) error {
 	query := `
 	INSERT INTO auth_user (email, name, passw, created)
@@ -188,4 +189,48 @@ func (ds *DataStore) ListUserReadings(userID int, args ...string) ([]Reading, er
 	}
 
 	return readings, nil
+}
+
+type ReaderStat struct {
+	ReaderName string
+	Name       string
+	Labels     []string
+	Values     []int
+}
+
+//ReadingStat - ....
+type TotalReadingStat struct {
+	ReaderName    string
+	TotalDuration int
+}
+
+// GetStatsTotals - retrieves all records or of the given reader passed as args
+func (ds *DataStore) GetStatsTotals(userID int) ([]TotalReadingStat, error) {
+	totals := []TotalReadingStat{}
+	query := `SELECT sum(duration) AS total, reader
+		FROM readings
+		WHERE user_id = ?
+		GROUP BY reader
+		ORDER BY total DESC`
+
+	var rows *sql.Rows
+	var err error
+	rows, err = ds.DB.Query(query, userID)
+
+	//fmt.Println(query, userID)
+	// fmt.Printf("%#v", args)
+
+	if err != nil {
+		return totals, err
+	}
+	defer rows.Close()
+	var stat TotalReadingStat
+
+	//var created string
+	for rows.Next() {
+		rows.Scan(&stat.TotalDuration, &stat.ReaderName)
+		totals = append(totals, stat)
+	}
+
+	return totals, nil
 }

@@ -1,6 +1,7 @@
 
 let modal = document.querySelector("#myModal"),
     span = document.querySelector('.close'),
+    stats = document.querySelector('#stats'),
     readers = document.querySelector('#readers'),
     reader = document.querySelector('select[name=reader]'),
     author = document.querySelector('input[name=author]'),
@@ -8,9 +9,15 @@ let modal = document.querySelector("#myModal"),
     day = document.querySelector('input[name=day]'),
     duration = document.querySelector('input[name=duration]');
 
+stats.hidden = true;
+
 document.querySelector("#addentry").addEventListener('click', (ev) => {
     reader.value = readers.value;
     modal.style.display = "block";
+});
+
+document.querySelector('#togglestats').addEventListener('click', (ev) => {
+    stats.hidden = !stats.hidden;
 });
 
 readers.addEventListener("change", (ev) => {

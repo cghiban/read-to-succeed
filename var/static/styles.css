@@ -5,7 +5,7 @@ body {
 table {
   border-collapse: collapse;
 }
-/* Zebra striping */
+/* table zebra striping */
 tr:nth-child(even) {
   background-color: #eee;
 }
@@ -114,7 +114,10 @@ only screen and (max-width: 760px)/*,
   cursor: pointer;
 }
 
-
 .message {
   background-color: pink;
+}
+
+#stats {
+  /*display:  none;*/
 }

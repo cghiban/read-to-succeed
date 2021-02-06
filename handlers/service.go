@@ -32,7 +32,7 @@ func NewService(l *log.Logger, store *data.DataStore, readers *string) *Service 
 			}
 			return t.Format("Jan 2, 2006")
 		},
-		"dateISOish": func(t time.Time) string { return t.Format("2006-01-02 3:04p") },
+		"dateISOish": func(t time.Time) string { return t.Format("2006-01-02 3:04pm") },
 	}
 	templates := template.Must(template.New("tmpls").Funcs(funcMap).ParseGlob("var/templates/*.gohtml"))
 	//templates = templates.Funcs(funcMap)
@@ -75,23 +75,34 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	stats, err := s.store.GetStatsTotals(userID)
+	if err != nil {
+		s.l.Panicln("stats err: ", err)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	}
+
 	data := struct {
 		CurrentReader string
 		Readers       []string
 		Readings      []data.Reading
 		Today         string
+		Stats         []data.TotalReadingStat
 	}{
 		CurrentReader: reader,
 		Readers:       strings.Split(*s.readers, ","),
 		Readings:      readings,
 		Today:         time.Now().Format("2006-01-02"),
+		Stats:         stats,
 	}
+
+	//s.l.Printf("stats: %#v\n", stats)
 
 	if err := s.t.ExecuteTemplate(rw, "index.gohtml", data); err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
 }
 
+// AddReading - add new entry
 func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(rw, "Invalid request", http.StatusBadRequest)
