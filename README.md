@@ -8,16 +8,11 @@ Tiny webapp for recording ones read book, articles, etc
 
 - [x] start using Gorilla toolkit
 - [x] add authentication (users, login, session)
-- [ ] show some stats
-- [ ] add readers management and stop using READERS env var
+- [x] show some stats
+- [x] add readers management and stop using READERS env var
 - [ ] add user settings (privacy / readers and groups)
 - [ ] add groups
 
-
-set user list using ENV vars
-```shell
-READERS=costel,cornelia,purcel
-```
 
 database:
 
@@ -88,11 +83,13 @@ CREATE INDEX readings_user_id_ndx ON readings(user_id, reader_id, created desc);
 INSERT INTO readings (reader, book_author, book_title, day, duration, created) VALUES 
 ("Cornel", "Ion Creangă", "Povestea poveștilor", "2020-10-01", 3, datetime('now','localtime')),
 ("Cornel", "Will Wight", "Unsouled", "2020-12-30", 72, datetime('now','localtime'));
+
+
 ```
 
 Run as:
 
 ```bash
-BIND_ADDRESS=:8080 DB_PATH=var/db.db READERS=Cornel,Gigel go run .
+BIND_ADDRESS=:8080 DB_PATH=var/db.db go run .
 ```
 

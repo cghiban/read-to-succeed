@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"read2succeed/data"
-	"strings"
 	"text/template"
 	"time"
 
@@ -81,18 +80,25 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
 
+	readers, err := s.store.GetUserReaders(userID)
+	if err != nil {
+		s.l.Panicln("stats err: ", err)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	}
+
 	data := struct {
 		CurrentReader string
-		Readers       []string
+		Readers       []data.Reader
 		Readings      []data.Reading
 		Today         string
 		Stats         []data.TotalReadingStat
 	}{
 		CurrentReader: reader,
-		Readers:       strings.Split(*s.readers, ","),
-		Readings:      readings,
-		Today:         time.Now().Format("2006-01-02"),
-		Stats:         stats,
+		//Readers:       strings.Split(*s.readers, ","),
+		Readers:  readers,
+		Readings: readings,
+		Today:    time.Now().Format("2006-01-02"),
+		Stats:    stats,
 	}
 
 	//s.l.Printf("stats: %#v\n", stats)
@@ -156,4 +162,86 @@ func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 	data := r.PostForm
 	log.Printf("form data: %#v", data)
 	rw.Write([]byte("[1,2,3]"))
+}
+
+// Settings - display settings page
+func (s *Service) Settings(rw http.ResponseWriter, r *http.Request) {
+	isLoggedIn := s.IsLoggedIn(r)
+	if !isLoggedIn {
+		http.Redirect(rw, r, "/login", http.StatusFound)
+		return
+	}
+
+	session, err := s.session.Get(r, "session")
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	userID := session.Values["user_id"].(int)
+
+	readers, err := s.store.GetUserReaders(userID)
+	if err != nil {
+		log.Println(err)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Readers []data.Reader
+	}{
+		Readers: readers,
+	}
+
+	if err := s.t.ExecuteTemplate(rw, "settings.gohtml", data); err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// AddReader - add new entry
+func (s *Service) AddReader(rw http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(rw, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	session, err := s.session.Get(r, "session")
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	contentType := r.Header["Content-Type"]
+	log.Println(contentType, len(contentType) == 1, contentType[0])
+
+	if !s.IsLoggedIn(r) {
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+
+	if len(contentType) == 1 && contentType[0] == "application/json" {
+
+		decoder := json.NewDecoder(r.Body)
+		defer r.Body.Close()
+
+		newReader := &data.Reader{}
+		err := decoder.Decode(newReader)
+		if err != nil {
+			log.Println(err)
+			http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+			return
+		}
+
+		userID, _ := session.Values["user_id"].(int)
+		newReader.UserID = userID
+		log.Println(newReader)
+		err = s.store.AddReader(newReader)
+		if err != nil {
+			log.Println(err)
+			http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+			return
+		}
+
+		rw.Write([]byte("{\"status\":\"ok\"}"))
+		return
+	}
 }

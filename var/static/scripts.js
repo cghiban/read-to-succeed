@@ -9,7 +9,9 @@ let modal = document.querySelector("#myModal"),
     day = document.querySelector('input[name=day]'),
     duration = document.querySelector('input[name=duration]');
 
-stats.hidden = true;
+if (stats) {
+    stats.hidden = true;
+}
 
 document.querySelector("#addentry").addEventListener('click', (ev) => {
     reader.value = readers.value;
@@ -30,8 +32,8 @@ readers.addEventListener("change", (ev) => {
     }
 });
 
-document.querySelector('button').addEventListener('click', (ev) => {
-    let form = document.querySelector('form'),
+document.querySelector('form#addreading button').addEventListener('click', (ev) => {
+    let form = document.querySelector('form#addreading'),
     formData = new FormData(form);
     console.log('valid: ', form.checkValidity());
     if (!form.checkValidity())

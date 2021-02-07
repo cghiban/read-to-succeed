@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="/static/styles.css">
+
+        <title>Settings - Read to Succeed</title>
+    </head>
+  <body>
+    <div class="welcome-center">
+    <a href="/">Readings</a> &nbsp;
+    <a href="#" id="newreader">Add reader</a>
+{{ if 0 }}
+      <select id="readers">
+  {{- $cr := .CurrentReader -}}
+      <option value="">-= pick a reader =-</option>
+  {{ range .Readers -}}
+      <option value="{{.Name}}" {{if eq .Name $cr}}selected{{end}}>{{.ID}}.{{.Name}}</option>
+  {{ end }}
+      </select>
+      <a href="#" id="addentry" title="add reading"><strong>+</strong></a>
+      <a href="#" id="togglestats">stats</a>
+{{ end }}
+    </div>
+
+<div style="overflow-x:auto;">
+  <table>
+    <thead>
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+    </tr>
+    </thead>
+    <tbody>
+  {{ range .Readers}}
+  <tr>
+      <td>{{.ID}}</td>
+      <td>{{.Name}}</td>
+  </tr>
+  {{ end }}
+  <tbody>
+  </table>
+</div>
+
+    <!-- The Modal -->
+    <div id="myModal" class="modal">
+      <!-- Modal content -->
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Add new reader</h3>
+        <form id="addreader">
+          <div>
+            <label>Reader's Name</label>
+            <input type="text" name="readername" required>
+          </div>
+          <div>
+            <label></label>
+            <button>add</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+  <script type="text/javascript" src="/static/settings.js"></script>
+  </body>
+</html>

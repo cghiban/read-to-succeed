@@ -42,6 +42,13 @@ type Reading struct {
 	CreatedOn  time.Time `json:-`
 }
 
+//Reader
+type Reader struct {
+	ID     int
+	UserID int
+	Name   string
+}
+
 //DataStore - db operations
 type DataStore struct {
 	DB *sql.DB
@@ -131,7 +138,7 @@ func (ds *DataStore) AddReading(r *Reading) error {
 		return err
 	}
 	rowNum, _ := res.RowsAffected()
-	ds.L.Println(" -- added videos to DB: ", rowNum)
+	ds.L.Println(" -- added new reading to DB: ", rowNum)
 
 	id, err := res.LastInsertId()
 	if err != nil {
@@ -198,7 +205,7 @@ type ReaderStat struct {
 	Values     []int
 }
 
-//ReadingStat - ....
+//TotalReadingStat - ....
 type TotalReadingStat struct {
 	ReaderName    string
 	TotalDuration int
@@ -233,4 +240,58 @@ func (ds *DataStore) GetStatsTotals(userID int) ([]TotalReadingStat, error) {
 	}
 
 	return totals, nil
+}
+
+// GetUserReaders - retrieves all readers attached to this user
+func (ds *DataStore) GetUserReaders(userID int) ([]Reader, error) {
+	readers := []Reader{}
+	query := `SELECT reader_id, name FROM readers
+		WHERE user_id = ? ORDER BY name ASC`
+
+	var rows *sql.Rows
+	var err error
+	rows, err = ds.DB.Query(query, userID)
+
+	//fmt.Println(query, userID)
+	// fmt.Printf("%#v", args)
+
+	if err != nil {
+		return readers, err
+	}
+	defer rows.Close()
+	var reader Reader
+
+	for rows.Next() {
+		rows.Scan(&reader.ID, &reader.Name)
+		readers = append(readers, reader)
+	}
+
+	return readers, nil
+}
+
+// AddReader - add new reader into the db
+func (ds *DataStore) AddReader(r *Reader) error {
+	query := `INSERT INTO readers (user_id, name, created)
+        VALUES (?, ?, datetime('now','localtime'))`
+
+	stmt, err := ds.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(r.UserID, r.Name)
+	if err != nil {
+		return err
+	}
+	rowNum, _ := res.RowsAffected()
+	ds.L.Println(" -- added new reader to DB: ", rowNum)
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	r.ID = int(id)
+
+	return nil
 }

@@ -20,7 +20,6 @@ var dataStore *data.DataStore
 
 var bindAddress = env.String("BIND_ADDRESS", true, "", "bind address for server, i.e. localhost")
 var dbPath = env.String("DB_PATH", true, "", "path to a sqlite DB")
-var readers = env.String("READERS", true, "", "list of readers (comma sepparated")
 
 func init() {
 	err := env.Parse()
@@ -57,6 +56,8 @@ func main() {
 	postRouter := sm.Methods("POST").Subrouter()
 	postRouter.HandleFunc("/add", r2sservice.AddReading)
 
+	sm.HandleFunc("/addreader", r2sservice.AddReader)
+	sm.HandleFunc("/settings", r2sservice.Settings)
 	sm.HandleFunc("/register", r2sservice.UserSignUp)
 	sm.HandleFunc("/login", r2sservice.UserLogIn)
 	sm.HandleFunc("/logout", r2sservice.UserLogOut)

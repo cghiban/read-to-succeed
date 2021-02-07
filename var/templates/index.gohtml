@@ -14,11 +14,12 @@
   {{- $cr := .CurrentReader -}}
       <option value="">-= pick a reader =-</option>
   {{ range .Readers -}}
-      <option value="{{.}}" {{if eq . $cr}}selected{{end}}>{{.}}</option>
+      <option value="{{.Name}}" {{if eq .Name $cr}}selected{{end}}>{{.ID}}.{{.Name}}</option>
   {{ end }}
       </select>
-      <a href="#" id="addentry" title="add reading">+</a>
+      <a href="#" id="addentry" title="add reading"><strong>+</strong></a>
       <a href="#" id="togglestats">stats</a>
+      <a href="/settings">settings</a>
     </div>
 
     <div id="stats">
@@ -65,14 +66,14 @@
       <div class="modal-content">
         <span class="close">&times;</span>
         <h3>Add new reading</h3>
-        <form>
+        <form id="addreading">
           <div>
             <label>Reader</label>
             <!--<input type="text" name="reader" readonly required>-->
             <select name="reader" required>
               <option value="">-= pick a reader =-</option>
               {{ range .Readers}}
-              <option value="{{.}}">{{.}}</option>
+              <option value="{{.Name}}">{{.Name}}</option>
               {{ end}}
             </select>
           </div>
