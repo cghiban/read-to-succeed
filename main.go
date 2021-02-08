@@ -19,12 +19,18 @@ import (
 var dataStore *data.DataStore
 
 var bindAddress = env.String("BIND_ADDRESS", true, "", "bind address for server, i.e. localhost")
+var sessionKey = env.String("SESSION_KEY", true, "", "Session Key for ecoding the session")
 var dbPath = env.String("DB_PATH", true, "", "path to a sqlite DB")
 
 func init() {
 	err := env.Parse()
 	if err != nil {
 		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	if *sessionKey == "" {
+		fmt.Println("missing SESSION_KEY")
 		os.Exit(1)
 	}
 
@@ -46,7 +52,7 @@ func main() {
 
 	l.Println("about to start server on ", *bindAddress)
 
-	r2sservice := handlers.NewService(l, dataStore, readers)
+	r2sservice := handlers.NewService(l, dataStore, sessionKey)
 
 	//sm := http.NewServeMux()
 	sm := mux.NewRouter()

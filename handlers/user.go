@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"read2succeed/data"
@@ -58,8 +57,6 @@ func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Cache-Control", "no-cache")
 
 	if r.Method == "GET" {
-		//u, err := s.store.GetUser("aa")
-		//s.l.Println(u, err)
 		if err := s.t.ExecuteTemplate(rw, "login.gohtml", nil); err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
@@ -69,7 +66,6 @@ func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 		email := strings.Trim(r.Form.Get("email"), " ")
 		password := strings.Trim(r.Form.Get("password"), " ")
 
-		log.Println(email, password)
 		user, err := s.store.GetUser(email)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -80,8 +76,6 @@ func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 			session.Values["logged_in"] = true
 			session.Values["user_id"] = user.ID
 			session.Values["name"] = user.Name
-
-			fmt.Println("abut to save session:", session.Values)
 
 			err = session.Save(r, rw)
 			if err != nil {

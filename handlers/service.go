@@ -16,12 +16,13 @@ type Service struct {
 	l       *log.Logger
 	store   *data.DataStore
 	readers *string
+	//session *sqlitestore.SqliteStore
 	session *sessions.CookieStore
 	t       *template.Template
 }
 
 // NewService initializes a new Serivice
-func NewService(l *log.Logger, store *data.DataStore, readers *string) *Service {
+func NewService(l *log.Logger, store *data.DataStore, sessionKey *string) *Service {
 	// init template
 	funcMap := template.FuncMap{
 		"dayToDate": func(s string) string {
@@ -36,14 +37,21 @@ func NewService(l *log.Logger, store *data.DataStore, readers *string) *Service 
 	templates := template.Must(template.New("tmpls").Funcs(funcMap).ParseGlob("var/templates/*.gohtml"))
 	//templates = templates.Funcs(funcMap)
 
-	session := sessions.NewCookieStore([]byte("secret-password"))
-	session.Options = &sessions.Options{
-		Path:     "/",
-		MaxAge:   86400 * 7,
+	sessStore := sessions.NewCookieStore([]byte(*sessionKey))
+	/*sessStore, err := sqlitestore.NewSqliteStoreFromConnection(store.DB, "sessions", "/", 86400, []byte(*sessionKey))
+	if err != nil {
+		panic(err)
+	}*/
+
+	//sessStore.Options = &sessions.Options{HttpOnly: true}
+
+	sessStore.Options = &sessions.Options{
 		HttpOnly: true,
+		Path:     "/",
+		MaxAge:   7 * 86400,
 	}
 
-	return &Service{l: l, store: store, t: templates, readers: readers, session: session}
+	return &Service{l: l, store: store, t: templates, session: sessStore}
 }
 
 // GetReadings - list user's/users' read books
@@ -236,8 +244,9 @@ func (s *Service) AddReader(rw http.ResponseWriter, r *http.Request) {
 		log.Println(newReader)
 		err = s.store.AddReader(newReader)
 		if err != nil {
-			log.Println(err)
-			http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+			s.l.Printf("AddReader(%d, %s):", userID, newReader.Name)
+			s.l.Println(err)
+			http.Error(rw, "{\"status\":\"error\", \"message\":\"Unable to add reader\"}", http.StatusInternalServerError)
 			return
 		}
 

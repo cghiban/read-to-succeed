@@ -45,6 +45,9 @@ document.querySelector('form#addreader button').addEventListener('click', (ev) =
         if (data && data.status === "ok") {
             document.location.href = "/settings";
         }
+        else if (data.message && data.message !== "") {
+            alert(data.message);
+        }
     });
 
     ev.preventDefault();

@@ -100,7 +100,7 @@ func (ds *DataStore) GetUser(email string) (*AuthUser, error) {
 		ds.L.Println(row.Err())
 		return nil, row.Err()
 	}
-	ds.L.Println(query, email)
+	//ds.L.Println(query, email)
 
 	//var day, created, duration string
 	var userID, created string
@@ -114,8 +114,7 @@ func (ds *DataStore) GetUser(email string) (*AuthUser, error) {
 	u.ID = UserID
 	t, _ := time.Parse("2006-01-02T15:04:05Z", created)
 	u.CreatedOn = t
-
-	ds.L.Printf("**** %#v\n", u)
+	//ds.L.Printf("**** %#v\n", u)
 
 	return &u, nil
 }
