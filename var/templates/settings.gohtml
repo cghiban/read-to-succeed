@@ -4,33 +4,26 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inconsolata">
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <link rel="stylesheet" href="/static/styles.css">
 
         <title>Settings - Read to Succeed</title>
     </head>
   <body>
     <div class="welcome-center">
-    <a href="/">Readings</a> &nbsp;
-    <a href="#" id="newreader">Add reader</a>
-{{ if 0 }}
-      <select id="readers">
-  {{- $cr := .CurrentReader -}}
-      <option value="">-= pick a reader =-</option>
-  {{ range .Readers -}}
-      <option value="{{.Name}}" {{if eq .Name $cr}}selected{{end}}>{{.ID}}.{{.Name}}</option>
-  {{ end }}
-      </select>
-      <a href="#" id="addentry" title="add reading"><strong>+</strong></a>
-      <a href="#" id="togglestats">stats</a>
-{{ end }}
+      <a href="/" id="addentry">Readings</a>
+      <a href="#" id="newreader">Add reader</a>
+      <a href="#" id="newgroup">Add group</a>
+      <a href="/logout"><span class="material-icons">exit_to_app</span></a>
     </div>
 
-<div style="overflow-x:auto;">
+<div style="float: left;">
   <table>
     <thead>
     <tr>
       <th>#</th>
-      <th>Name</th>
+      <th>Reader Name</th>
     </tr>
     </thead>
     <tbody>
@@ -43,17 +36,71 @@
   <tbody>
   </table>
 </div>
+<div style="float: left;">&nbsp;</div>
+    <div style="float: left;">
+      <table>
+        <thead>
+        <tr>
+          <th>#</th>
+          <th>Group Name</th>
+          <th>Access Code</th>
+          <th>Public?</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{ range .UserGroups}}
+          <tr class="g{{.Status}}">
+            <td>{{.ID}}</td>
+            <td>{{.Name}}</td>
+            <td>{{.AccessCode}}</td>
+            <td>{{if eq .Status "public" -}}
+                <input type="checkbox" value="{{.ID}}" checked>
+                  {{else if eq .Status "private"}}
+                <input type="checkbox" value="{{.ID}}">
+              {{end}}
+            </td>
+          </tr>
+        {{ end }}
+        <tbody>
+      </table>
+    </div>
+<div style="float: left;">&nbsp;</div>
+<div style="float: left;">
+  <table>
+    <thead>
+    <tr>
+      <th>Group Name</th>
+      <th>Readers</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+      <td colspan="2"><a href="#">Join a new group</a></td>
+    </tr>
+  {{ range $key, $value := .GroupReaders}}
+  <tr>
+      <td>{{$key}}</td>
+      <td><ul>
+      {{range $value }}
+        <li>{{.Name}}</li>
+      {{end}}
+      </ul></td>
+  </tr>
+  {{ end }}
+  <tbody>
+  </table>
+</div>
 
-    <!-- The Modal -->
-    <div id="myModal" class="modal">
+    <!-- The Reader Modal -->
+    <div id="readerModal" class="modal">
       <!-- Modal content -->
       <div class="modal-content">
         <span class="close">&times;</span>
         <h3>Add new reader</h3>
         <form id="addreader">
           <div>
-            <label>Reader's Name</label>
-            <input type="text" name="readername" required>
+            <label>Reader Name</label>
+            <input type="text" name="name" required>
           </div>
           <div>
             <label></label>
@@ -61,7 +108,25 @@
           </div>
         </form>
       </div>
+    </div>
 
+    <!-- The Group Modal -->
+    <div id="groupModal" class="modal">
+      <!-- Modal content -->
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Add new group</h3>
+        <form id="addgroup">
+          <div>
+            <label>Group Name</label>
+            <input type="text" name="name" required>
+          </div>
+          <div>
+            <label></label>
+            <button>add</button>
+          </div>
+        </form>
+      </div>
     </div>
 
   <script type="text/javascript" src="/static/settings.js"></script>

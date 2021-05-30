@@ -10,10 +10,17 @@
     </head>
   <body>
     <div class="welcome-center">
+        <a href="/">Home</a>
+        <a href="/about">About</a>
         <h1>Sign Up</h1>
     </div>
 
+    {{if .Message}}
+    <div class="message">{{.Message}}</div>
+    {{end}}
+
     <form method="POST" action="/register">
+		{{ .csrfField }}
         <div>
             <label>Your Name</label>
             <input type="text" name="name" required>
@@ -31,5 +38,7 @@
             <button>submit</button>
         </div>
     </form>
+
+    <div>Already have an account? <a href="/register">Login</a>.</div>
   </body>
 </html>

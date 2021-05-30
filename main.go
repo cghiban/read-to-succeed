@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/gorilla/csrf"
 	"log"
 	"net/http"
 	"os"
@@ -19,7 +20,8 @@ import (
 var dataStore *data.DataStore
 
 var bindAddress = env.String("BIND_ADDRESS", true, "", "bind address for server, i.e. localhost")
-var sessionKey = env.String("SESSION_KEY", true, "", "Session Key for ecoding the session")
+var sessionKey = env.String("SESSION_KEY", true, "", "Session Key for encoding the session")
+var csrfKey = env.String("CSRF_KEY", true, "", "csrf key")
 var dbPath = env.String("DB_PATH", true, "", "path to a sqlite DB")
 
 func init() {
@@ -35,6 +37,7 @@ func init() {
 	}
 
 	//db := InitDB(*dbPath)
+	*dbPath += "?_fk=1&_journal=WAL&_cache_size=-16000"
 	db, err := sql.Open("sqlite3", *dbPath) // Open the created SQLite File
 
 	if err != nil {
@@ -43,14 +46,24 @@ func init() {
 	if db == nil {
 		log.Fatal("unable to get a db connection")
 	}
-	l := log.New(os.Stdout, "reading 2 succees", log.LstdFlags)
+	l := log.New(os.Stdout, "reading 2 succeed", log.LstdFlags)
 	dataStore = &data.DataStore{DB: db, L: l}
+
+	sqliteVersion, _ := dataStore.GetSQLiteVersion()
+	l.Println("using SQLite version", sqliteVersion)
+
+	// to keep readers in session
+	//gob.Register([]data.Reader{})
 }
 
 func main() {
 	l := log.New(os.Stdout, "reading 2 succees", log.LstdFlags)
 
 	l.Println("about to start server on ", *bindAddress)
+
+	//dataStore.GetStatsDaily(1)
+
+	//return
 
 	r2sservice := handlers.NewService(l, dataStore, sessionKey)
 
@@ -62,11 +75,22 @@ func main() {
 	postRouter := sm.Methods("POST").Subrouter()
 	postRouter.HandleFunc("/add", r2sservice.AddReading)
 
-	sm.HandleFunc("/addreader", r2sservice.AddReader)
 	sm.HandleFunc("/settings", r2sservice.Settings)
-	sm.HandleFunc("/register", r2sservice.UserSignUp)
-	sm.HandleFunc("/login", r2sservice.UserLogIn)
-	sm.HandleFunc("/logout", r2sservice.UserLogOut)
+	sm.HandleFunc("/addreader", r2sservice.AddReader)
+	sm.HandleFunc("/addgroup", r2sservice.AddGroup)
+	//sm.HandleFunc("/joingroup", r2sservice.JoinGroup)
+	sm.HandleFunc("/dailystats", r2sservice.GetDailyStats)
+	sm.HandleFunc("/about", r2sservice.About)
+
+	//sm.HandleFunc("/register", r2sservice.UserSignUp)
+
+	// make sure we set Secure to true for production
+	csrfMiddleware := csrf.Protect([]byte(*csrfKey), csrf.Secure(false))
+	userRouter := sm.Methods("POST", "GET").Subrouter()
+	userRouter.Use(csrfMiddleware)
+	userRouter.HandleFunc("/register", r2sservice.UserSignUp)
+	userRouter.HandleFunc("/login", r2sservice.UserLogIn)
+	userRouter.HandleFunc("/logout", r2sservice.UserLogOut)
 
 	sm.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("var/static/"))))
 
