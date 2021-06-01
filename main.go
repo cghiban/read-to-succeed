@@ -78,6 +78,7 @@ func main() {
 	sm.HandleFunc("/settings", r2sservice.Settings)
 	sm.HandleFunc("/addreader", r2sservice.AddReader)
 	sm.HandleFunc("/addgroup", r2sservice.AddGroup)
+	sm.HandleFunc("/updategroup/{id:[0-9]+}", r2sservice.UpdateGroup).Methods("POST").HeadersRegexp("Content-Type", "application/json")
 	//sm.HandleFunc("/joingroup", r2sservice.JoinGroup)
 	sm.HandleFunc("/dailystats", r2sservice.GetDailyStats)
 	sm.HandleFunc("/about", r2sservice.About)

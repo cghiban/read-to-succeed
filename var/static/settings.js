@@ -71,6 +71,28 @@ document.querySelectorAll('form button').forEach( btn => {
     }, false);
 });
 
+document.querySelectorAll('#usergroups input[type=checkbox]').forEach( cb => {
+    console.log(cb, cb.checked);
+    cb.addEventListener('change', ev => {
+        console.log(cb, ev.target, cb.checked, cb.value);
+        let gid = cb.value;
+
+        let data = {status: cb.checked ? "public" : "private"};
+        console.log(data);
+
+        postData('/updategroup/' + gid, data)
+            .then(data => {
+                console.log(data); // JSON data parsed by `data.json()` call
+                if (data && data.status === "ok") {
+                    document.location.href = "/settings";
+                }
+                else if (data.message && data.message !== "") {
+                    alert(data.message);
+                }
+            });
+    });
+});
+
 // When the user clicks on <span> (x), close the modal
 document.querySelectorAll('span.close').forEach( s => {
     s.addEventListener('click', ev => {

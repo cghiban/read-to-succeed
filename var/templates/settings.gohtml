@@ -38,7 +38,7 @@
 </div>
 <div style="float: left;">&nbsp;</div>
     <div style="float: left;">
-      <table>
+      <table id="usergroups">
         <thead>
         <tr>
           <th>#</th>
@@ -55,9 +55,9 @@
             <td>{{.AccessCode}}</td>
             <td>{{if eq .Status "public" -}}
                 <input type="checkbox" value="{{.ID}}" checked>
-                  {{else if eq .Status "private"}}
+                {{else if eq .Status "private"}}
                 <input type="checkbox" value="{{.ID}}">
-              {{end}}
+                {{end}}
             </td>
           </tr>
         {{ end }}

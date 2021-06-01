@@ -20,6 +20,15 @@ td, th {
   border: 1px solid #ccc;
   text-align: left;
 }
+tr.gprivate td {
+    font-style: italic;
+}
+tr.gdeleted td {
+  text-decoration: line-through;
+}
+tr.gpublic td {
+  font-weight: bold;
+}
 
 /* 
 Max width before this PARTICULAR table gets nasty
@@ -121,3 +130,4 @@ only screen and (max-width: 760px)/*,
 #stats {
   /*display:  none;*/
 }
+

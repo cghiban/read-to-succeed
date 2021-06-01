@@ -3,10 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"read2succeed/data"
 	"sort"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -365,16 +367,14 @@ func (s *Service) AddGroup(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	contentType := r.Header["Content-Type"]
-	log.Println(contentType, len(contentType) == 1, contentType[0])
-
 	if !s.IsLoggedIn(r) {
 		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
 		return
 	}
 
+	contentType := r.Header["Content-Type"]
+	//log.Println(contentType, len(contentType) == 1, contentType[0])
 	if len(contentType) == 1 && contentType[0] == "application/json" {
-
 		decoder := json.NewDecoder(r.Body)
 		defer r.Body.Close()
 
@@ -401,10 +401,77 @@ func (s *Service) AddGroup(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UpdateGroup - update the given group
+func (s *Service) UpdateGroup(rw http.ResponseWriter, r *http.Request) {
+
+	if !s.IsLoggedIn(r) {
+		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
+		return
+	}
+	session, err := s.session.Get(r, "session")
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	vars := mux.Vars(r)
+	fmt.Printf("vars: %+v\n", vars)
+
+	//contentType == "application/json"
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	groupID, _ := strconv.Atoi(vars["id"])
+	group, err := s.store.GetGroupByID(groupID)
+	if err != nil {
+		s.l.Println(err)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Printf("groupbyid: %v\n", group)
+
+	userID, _ := session.Values["user_id"].(int)
+	fmt.Println("about to compare", userID, "with", group.UserID)
+	if group.UserID != userID {
+		s.l.Println(err)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	someGroup := &data.Group{}
+	if err := decoder.Decode(someGroup); err != nil {
+		log.Println(err)
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+	//s.l.Printf("someGroup: %+v", someGroup)
+
+	var changed bool
+	if someGroup.Name != "" && someGroup.Name != group.Name {
+		//fmt.Println("about to update Name:", someGroup.Name, "=>", group.Name)
+		group.Name = someGroup.Name
+		changed = true
+	}
+	if someGroup.Status != "" && someGroup.Status != group.Status {
+		//fmt.Println("about to update Status:", group.Status, "=>", someGroup.Status)
+		group.Status = someGroup.Status
+		changed = true
+	}
+	if changed {
+		s.l.Printf("about to upgrade: %+v", group)
+		if err = s.store.UpdateGroup(&group); err != nil {
+			s.l.Println("UpdateGroup:", err)
+			http.Error(rw, "{\"status\":\"error\", \"message\":\"Unable to update group\"}", http.StatusBadRequest)
+			return
+		}
+		rw.Write([]byte("{\"status\":\"ok\"}"))
+	}
+}
+
 // About - about this site
 func (s *Service) About(rw http.ResponseWriter, r *http.Request) {
 	if err := s.t.ExecuteTemplate(rw, "about.gohtml", nil); err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
-
 }

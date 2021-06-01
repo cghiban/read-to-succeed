@@ -443,6 +443,25 @@ func (ds *DataStore) AddGroup(g *Group) error {
 	return nil
 }
 
+// UpdateGroup - update group
+func (ds *DataStore) UpdateGroup(g *Group) error {
+	query := `UPDATE groups SET name = ?, status = ? WHERE id = ?`
+	stmt, err := ds.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(g.Name, g.Status, g.ID)
+	if err != nil {
+		return err
+	}
+	rowNum, _ := res.RowsAffected()
+	ds.L.Println(" -- update groups: ", rowNum)
+
+	return nil
+}
+
 // GroupAddReader - add reader to group
 func (ds *DataStore) GroupAddReader(groupID, readerID int) error {
 	query := `INSERT INTO group_readers (group_id, reader_id) VALUES (?, ?)`
@@ -534,4 +553,24 @@ func (ds *DataStore) GetUserGroups(userID int) ([]Group, error) {
 	}
 
 	return groups, nil
+}
+
+// GetGroupByID - retrieves group
+func (ds *DataStore) GetGroupByID(groupID int) (Group, error) {
+	var g Group
+
+	query := `SELECT name, user_id, code, status, created FROM groups WHERE id = ?`
+	row := ds.DB.QueryRow(query, groupID)
+
+	var gCreated, gUserID string
+
+	err := row.Scan(&g.Name, &gUserID, &g.AccessCode, &g.Status, &gCreated)
+	if err != nil {
+		return g, nil
+	}
+	g.UserID, _ = strconv.Atoi(gUserID)
+	g.CreatedOn, _ = time.Parse("2006-01-02T15:04:05Z", gCreated)
+	g.ID = groupID
+
+	return g, nil
 }
