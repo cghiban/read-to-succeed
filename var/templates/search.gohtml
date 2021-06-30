@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+		<!-- <link rel="stylesheet" href="/static/styles.css"> -->
+        <title>Sign Up - Read to Succeed</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+<style type="text/css">
+@keyframes blinker {
+    from {opacity: 1.0;}
+    to {opacity: 0.0;}
+  }
+
+.blink {
+    text-decoration: blink;
+    animation-name: blinker;
+    animation-duration: 0.6s;
+    animation-iteration-count:infinite;
+    animation-timing-function:ease-in-out;
+    animation-direction: alternate;
+  }
+
+#results img {
+	max-height: 80px;
+	float: left;
+	margin-right: 10px;
+}
+
+#results ul {
+  list-style: none;
+  padding: 0;
+}
+li {
+  padding-left: 1.3em;
+  padding-top: 0.4em;
+  clear:both;
+}
+
+li .snippet {
+  font-size: small;
+}
+/*li:before {
+  content: "\f00c";
+  font-family: FontAwesome;
+  display: inline-block;
+  margin-left: -1.3em; /* same as padding-left set on li */
+  width: 1.3em; /* same as padding-left set on li */
+}*/
+</style>
+<script type="text/javascript">
+window.addEventListener("load", (ev) => {
+	const delay_by_in_ms = 700;
+	let scheduled_function = false,
+		results_div = document.querySelector('#results'),
+		search_icon = document.querySelector('#search-icon'),
+		last_query = '';
+
+	let doSearch = function(endpoint, params) {
+		console.info("doing the search...", params);
+		if (params["q"].length < 3) {
+			return;
+		}
+		last_query = params["q"];
+		console.info("/search?q=" + encodeURI(params["q"]));
+		search_icon.classList.add('blink');
+
+		fetch("/search?q=" + encodeURI(params["q"]))
+			.then(response => response.json())
+			.then(data => {
+				console.log(data);
+				console.log("totalItems:", data["totalItems"]);
+				if (data["items"].length > 0) {
+					console.log("items[0]:", data["items"][0]);
+				}
+				console.log(typeof data);
+				displayResults(data["items"]);
+			});
+	};
+
+	let displayResults = function(data) {
+		results_div.childNodes.forEach(e => e.remove());
+
+		let ul = document.createElement("ul");
+		data.forEach(item => {
+			let info = item["volumeInfo"];
+			console.log("\t-", item["id"], "-", info["title"], "~~", info["authors"]);
+			let li = document.createElement("li");
+			const newContent = document.createTextNode(
+				(info["authors"] ? info["authors"].join(", ") : "") + " - " + info["title"]
+			);
+			let div_title = document.createElement("div");
+			div_title.appendChild(newContent);
+			
+			if (info["imageLinks"]) {
+				let imgUrl = info["imageLinks"]["smallThumbnail"];
+				imgUrl = imgUrl ? imgUrl : info["imageLinks"]["thumbnail"];
+				if (imgUrl) {
+					let img = document.createElement("img");
+					img.src = imgUrl.replace("http:", "https:");
+					li.appendChild(img);
+				}
+			}
+			li.appendChild(div_title);
+			ul.appendChild(li);
+
+			info["industryIdentifiers"].forEach(ii => {
+				if (ii["type"] === "ISBN_13") {
+					const isbn = document.createTextNode(ii["identifier"]);
+					let div_isbn = document.createElement("div");
+					div_isbn.appendChild(isbn);
+					li.appendChild(div_isbn);
+					return;
+				}
+			});
+			const snipet = document.createTextNode(item["searchInfo"]["textSnippet"]),
+				div_snipet = document.createElement("div");
+			//div_desc.
+			div_snipet.className = "snippet";
+			div_snipet.appendChild(snipet);
+			li.appendChild(div_snipet);
+			li.title = info["description"];
+			return;
+		});
+
+		search_icon.classList.remove('blink');
+		results_div.appendChild(ul);
+	};
+
+	document.querySelector('#q').addEventListener('keydown', function(ev) {
+		return;
+		const params = {
+			q: ev.target.value
+		};
+		//consoole.info(params);
+		if (params["q"] === last_query) {
+			return;
+		}
+		// if scheduled_function is NOT false, cancel the execution of the function
+		if (scheduled_function) {
+			clearTimeout(scheduled_function)
+		}
+		// setTimeout returns the ID of the function to be executed
+		scheduled_function = setTimeout(doSearch, delay_by_in_ms, '/search', params);
+	});
+
+	document.querySelector('#q').addEventListener('keydown', function(ev) {
+		if (ev.isComposing || ev.keyCode === 229 || ev.ctrlKey) {
+			return;
+		}
+		const keyName = event.key;
+		//console.log(ev.keyCode, ' ', keyName);
+		if (keyName !== "Enter") {
+			return;
+		}
+		const params = {
+			q: ev.target.value
+		};
+		if (params["q"] === last_query) {
+			return;
+		}
+
+		doSearch('/search', params);
+	});
+});
+</script>
+    </head>
+  <body>
+    <div class="welcome-center">
+        <h1>Search Book</h1>
+    </div>
+    <div>
+        <input class="searchbox" type="text" id="q" name="q">
+		<i id="search-icon" class="fas fa-search">&nbsp;</i>
+    </div>
+
+    <div id="results"></div>
+  </body>
+</html>
