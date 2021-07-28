@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inconsolata">
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <link rel="stylesheet" href="/static/styles.css">
+        <title>My Library - Read to Succeed</title>
+<style type="text/css">
+@keyframes blinker {
+    from {opacity: 1.0;}
+    to {opacity: 0.0;}
+  }
+
+.blink {
+    text-decoration: blink;
+    animation-name: blinker;
+    animation-duration: 0.6s;
+    animation-iteration-count:infinite;
+    animation-timing-function:ease-in-out;
+    animation-direction: alternate;
+  }
+
+#results img {
+	max-height: 80px;
+	float: left;
+	margin-right: 10px;
+}
+
+#results ul {
+  list-style: none;
+  padding: 0;
+}
+li {
+  padding-left: 1.3em;
+  padding-top: 0.4em;
+  clear:both;
+}
+
+li .snippet {
+  font-size: small;
+}
+</style>
+    </head>
+  <body>
+    <div class="welcome-center">
+      <a href="/library" title="my books"><span class="material-icons">library_books</span></a>
+      <a href="/" title="readings"><span class="material-icons">add_circle</span></a>
+      <a href="/settings" title="settings"><span class="material-icons">manage_accounts</span></a>
+      <a href="/logout"><span class="material-icons">exit_to_app</span></a>
+    </div>
+
+<div style="overflow-x:auto;">
+  <a href="#" id="addbook" title="add book to my libary">add book</a>
+  <table>
+    <thead>
+    <tr>
+      <th>#</th>
+      <th>Authors</th>
+      <th>Title</th>
+      <th>ISBN</th>
+      <th>Added on</th>
+    </tr>
+    </thead>
+    <tbody>
+  {{ range .Books}}
+  <tr>
+      <td>{{.ID}}</td>
+      <td>{{.Authors}}</td>
+      <td>{{.Title}}</td>
+      <td>{{.ISBN}}</td>
+      <td>{{dateISOish .AddedOn}}</td>
+  </tr>
+  {{ end }}
+  <tbody>
+  </table>
+</div>
+
+    <!-- The Modal -->
+    <div id="myModal" class="modal">
+      <!-- Modal content -->
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Search Book</h3>
+
+        <div>
+          <input class="searchbox" type="text" id="q" name="q">
+          <span id="search-icon" class="material-icons">stop_circle</span>
+        </div>
+
+        <div id="results"></div>
+        <div id="add-manually-link" style="display:none">
+          <a href="#">add book manually</a>
+        </div>
+        <div id="add-manually-form" style="display:none">
+          <form id="addbook">
+            <div>
+              <label>Authors</label>
+              <input type="text" name="author" required>
+            </div>
+            <div>
+              <label>Title</label>
+              <input type="text" name="title" required>
+            </div>
+            <div>
+              <label></label>
+              <button>submit</button>
+              <button id="hide-form">cancel</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+  <!-- <script type="text/javascript" src="/static/scripts.js"></script> -->
+<script type="text/javascript">
+window.addEventListener("load", (ev) => {
+  let modal = document.querySelector("#myModal"),
+    add_manually_link = document.querySelector("#add-manually-link"),
+    add_manually_form = document.querySelector("#add-manually-form");
+  
+  add_manually_link.addEventListener('click', (ev) => {
+    add_manually_form.style.display = "block";
+    add_manually_link.style.display = "none";
+  });
+  document.querySelector("#addbook").addEventListener('click', (ev) => {
+    modal.style.display = "block";
+  });
+  document.querySelector("#hide-form").addEventListener('click', (ev) => {
+    add_manually_form.style.display = "none";
+  });
+
+	const delay_by_in_ms = 700;
+	let scheduled_function = false,
+		results_div = document.querySelector('#results'),
+		search_icon = document.querySelector('#search-icon'),
+		last_query = '';
+
+	let doSearch = function(endpoint, params) {
+    console.info("doing the search...", params);
+    results_div.childNodes.forEach(e => e.remove());
+		if (params["q"].length < 3) {
+			return;
+		}
+    
+		last_query = params["q"];
+		console.info("/search_books?q=" + encodeURI(params["q"]));
+		search_icon.classList.add('blink');
+
+		fetch("/search_books?q=" + encodeURI(params["q"]))
+			.then(response => response.json())
+			.then(data => {
+				console.log(data);
+				console.log("totalItems:", data["totalItems"]);
+        search_icon.classList.remove("blink");
+				if (data["items"] && data["items"].length > 0) {
+					//console.log("items[0]:", data["items"][0]);
+          displayResults(data["items"]);
+        }
+        else {
+          // no results
+          results_div.innerHTML = "<p><small>Nothing found for this query</small></p>";
+          add_manually_link.style.display = "block";
+        }
+			});
+	};
+
+  let postData = async function (url = '', data = {}) {
+      // Default options are marked with *
+      const response = await fetch(url, {
+          method: 'POST',
+          mode: 'cors', // no-cors, *cors, same-origin
+          cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+          credentials: 'same-origin', // include, *same-origin, omit
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          //redirect: 'follow', // manual, *follow, error
+          referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+          body: JSON.stringify(data) // body data type must match "Content-Type" header
+      });
+      console.log(response);
+      return response.json(); // parses JSON response into native JavaScript objects
+  };
+
+	let displayResults = function(data) {
+
+		let ul = document.createElement("ul");
+		data.forEach(item => {
+			let info = item["volumeInfo"];
+			console.log("\t-", item["id"], "-", info["title"], "~~", info["authors"]);
+      console.log("\t-", item["id"], " ", item["description"], " ----- ", item["searchInfo"]["textSnippet"]);
+			let li = document.createElement("li");
+			const newContent = document.createTextNode(
+				(info["authors"] ? info["authors"].join(", ") : "") + " - " + info["title"]
+			);
+			let div_title = document.createElement("div");
+			div_title.appendChild(newContent);
+			
+      let imgUrl = info["imageLinks"]["smallThumbnail"];
+			if (info["imageLinks"]) {
+				imgUrl = imgUrl ? imgUrl : info["imageLinks"]["thumbnail"];
+				if (imgUrl) {
+					let img = document.createElement("img");
+					img.src = imgUrl.replace("http:", "https:");
+					li.appendChild(img);
+				}
+			}
+			li.appendChild(div_title);
+			ul.appendChild(li);
+
+      let isbn = "";
+      try {
+        info["industryIdentifiers"].forEach(ii => {
+          if (ii["type"] === "ISBN_13") {
+            isbn = ii["identifier"];
+            return;
+          }
+        });
+      } catch(e) {
+        console.log(e);
+      };
+			const description = document.createTextNode(item["description"] || item["searchInfo"]["textSnippet"]),
+				div_description = document.createElement("div");
+			//div_desc.
+			div_description.className = "snippet";
+			div_description.appendChild(description);
+			li.appendChild(div_description);
+			//li.title = info["description"];
+			
+      let add_link = document.createElement("a");
+      add_link.appendChild(document.createTextNode("add book"));
+      add_link.href="#";
+			li.appendChild(add_link);
+      add_link.addEventListener("click", (e) => {
+        e.preventDefault();
+        let data = {
+          title: info["title"],
+          authors: info["authors"] ? info["authors"].join(", ") : "",
+          isbn: isbn,
+          thumb_url: imgUrl
+        };
+        console.log(data);
+        console.log(JSON.stringify(data));
+        console.log(e.target.style);
+        postData("/add_book", data)
+          .then(data => {
+            console.log(data); // JSON data parsed by `data.json()` call)
+            if (data && data.status === "ok") {
+              e.target.style.display = "none";
+            }
+          });
+      });
+      //return;
+		});
+
+		search_icon.classList.remove('blink');
+		results_div.appendChild(ul);
+	};
+
+	document.querySelector('#q').addEventListener('keydown', function(ev) {
+		return;
+		const params = {
+			q: ev.target.value
+		};
+		//consoole.info(params);
+		if (params["q"] === last_query) {
+			return;
+		}
+		// if scheduled_function is NOT false, cancel the execution of the function
+		if (scheduled_function) {
+			clearTimeout(scheduled_function)
+		}
+		// setTimeout returns the ID of the function to be executed
+		scheduled_function = setTimeout(doSearch, delay_by_in_ms, '/search_books', params);
+	});
+
+	document.querySelector('#q').addEventListener('keydown', function(ev) {
+		if (ev.isComposing || ev.keyCode === 229 || ev.ctrlKey) {
+			return;
+		}
+		const keyName = event.key;
+		//console.log(ev.keyCode, ' ', keyName);
+		if (keyName !== "Enter") {
+			return;
+		}
+		const params = {
+			q: ev.target.value
+		};
+		if (params["q"] === last_query) {
+			return;
+		}
+
+		doSearch('/search_books', params);
+	});
+
+  // When the user clicks on <span> (x), close the modal
+  document.querySelector('span.close').onclick = function() {
+    //video.pause();
+    modal.style.display = "none";
+  }
+
+  // When the user clicks anywhere outside of the modal, close it
+  window.onclick = function(event) {
+    if (event.target == modal) {
+        //video.pause();
+        modal.style.display = "none";
+    }
+  }
+
+  document.body.addEventListener('keyup', function(e) {
+    if (e.key == "Escape") {
+        //msg.textContent += 'Escape pressed:'
+        modal.style.display = "none";
+    }
+  });
+});
+</script>
+  </body>
+</html>

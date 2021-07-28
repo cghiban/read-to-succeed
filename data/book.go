@@ -5,39 +5,36 @@ import (
 )
 
 type Book struct {
-	ID      int       `json:"id"`
-	UserID  int       `json:"user_id"`
-	Authors string    `json:"authors"`
-	Title   string    `json:"title"`
-	ISBN    string    `json:"isbn"`
-	AddedOn time.Time `json:"-"`
+	ID       int       `json:"id"`
+	UserID   int       `json:"user_id"`
+	Authors  string    `json:"authors"`
+	Title    string    `json:"title"`
+	ISBN     string    `json:"isbn"`
+	ThumbURL string    `json:"thumb_url"`
+	AddedOn  time.Time `json:"-"`
 }
 
 type NewBook struct {
-	UserID  int    `json:"user_id"`
-	Authors string `json:"authors"`
-	Title   string `json:"title"`
-	ISBN    string `json:"isbn"`
+	UserID   int    `json:"user_id"`
+	Authors  string `json:"authors"`
+	Title    string `json:"title"`
+	ThumbURL string `json:"thumb_url"`
+	ISBN     string `json:"isbn"`
 }
 
 type UpdateBook struct {
-	Authors string `json:"authors"`
-	Title   string `json:"title"`
-	ISBN    string `json:"isbn"`
+	Authors  string `json:"authors"`
+	Title    string `json:"title"`
+	ISBN     string `json:"isbn"`
+	ThumbURL string `json:"thumb_url"`
 }
 
 // AddBook - add new reading entry into the db
 func (ds *DataStore) AddBook(nb NewBook) (Book, error) {
 
-	/*reader, err := ds.GetReaderByName(nb.ReaderName)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("found reader: %+v", reader)*/
-
 	query := `
-        INSERT INTO books (user_id, title, authors, isbn, added_on)
-        VALUES (?, ?, ?, ?, ?)`
+        INSERT INTO books (user_id, title, authors, isbn, thumb_url, added_on)
+        VALUES (?, ?, ?, ?, ?, ?)`
 
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
@@ -47,7 +44,7 @@ func (ds *DataStore) AddBook(nb NewBook) (Book, error) {
 
 	now := time.Now().UTC().Round(time.Second)
 
-	res, err := stmt.Exec(nb.UserID, nb.Title, nb.Authors, nb.ISBN, now.Format("2006-01-02T15:04:05Z"))
+	res, err := stmt.Exec(nb.UserID, nb.Title, nb.Authors, nb.ISBN, nb.ThumbURL, now.Format("2006-01-02T15:04:05Z"))
 	if err != nil {
 		return Book{}, err
 	}
@@ -59,12 +56,13 @@ func (ds *DataStore) AddBook(nb NewBook) (Book, error) {
 		return Book{}, err
 	}
 	bk := Book{
-		ID:      int(id),
-		UserID:  nb.UserID,
-		Title:   nb.Title,
-		Authors: nb.Authors,
-		ISBN:    nb.ISBN,
-		AddedOn: now,
+		ID:       int(id),
+		UserID:   nb.UserID,
+		Title:    nb.Title,
+		Authors:  nb.Authors,
+		ISBN:     nb.ISBN,
+		ThumbURL: nb.ThumbURL,
+		AddedOn:  now,
 	}
 
 	return bk, nil
@@ -73,14 +71,8 @@ func (ds *DataStore) AddBook(nb NewBook) (Book, error) {
 // QueryByUserID - retrieve the user's books from the db
 func (ds *DataStore) QueryByUserID(userID int) ([]Book, error) {
 
-	/*reader, err := ds.GetReaderByName(nb.ReaderName)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("found reader: %+v", reader)*/
-
 	query := `
-	SELECT id, user_id, title, authors, isbn, added_on
+	SELECT id, user_id, title, authors, isbn, thumb_url, added_on
 	FROM books WHERE user_id = ? ORDER BY id DESC`
 
 	rows, err := ds.DB.Query(query, userID)
@@ -93,7 +85,7 @@ func (ds *DataStore) QueryByUserID(userID int) ([]Book, error) {
 	var b Book
 	var added string
 	for rows.Next() {
-		rows.Scan(&b.ID, &b.UserID, &b.Title, &b.Authors, &b.ISBN, &added)
+		rows.Scan(&b.ID, &b.UserID, &b.Title, &b.Authors, &b.ISBN, &b.ThumbURL, &added)
 
 		t, _ := time.Parse("2006-01-02T15:04:05Z", added)
 		b.AddedOn = t.Local()

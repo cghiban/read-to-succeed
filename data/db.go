@@ -42,7 +42,7 @@ type Reading struct {
 	BookTitle  string    `json:"title"`
 	Day        string    `json:"day"`
 	Duration   int       `json:"duration"`
-	CreatedOn  time.Time `json:-`
+	CreatedOn  time.Time `json:"-"`
 }
 
 // Reader - type for handling readers
@@ -139,6 +139,36 @@ func (ds *DataStore) GetUser(email string) (*AuthUser, error) {
 	//ds.L.Println(query, email)
 
 	//var day, created, duration string
+	var userID, created string
+	var u AuthUser
+	err := row.Scan(&userID, &u.Name, &u.Email, &u.Pass, &created)
+	if err != nil {
+		ds.L.Println("nope...")
+		ds.L.Println("****", err)
+		return nil, err
+	}
+	UserID, _ := strconv.Atoi(userID)
+	u.ID = UserID
+	t, _ := time.Parse("2006-01-02T15:04:05Z", created)
+	u.CreatedOn = t
+
+	return &u, nil
+}
+
+// GetUserByID - return given user
+func (ds *DataStore) GetUserByID(user_id int) (*AuthUser, error) {
+
+	query := `
+        SELECT user_id, name, email, passw, created
+		FROM auth_user
+		WHERE user_id = ?`
+	row := ds.DB.QueryRow(query, user_id)
+
+	if row.Err() != nil {
+		ds.L.Println(row.Err())
+		return nil, row.Err()
+	}
+
 	var userID, created string
 	var u AuthUser
 	err := row.Scan(&userID, &u.Name, &u.Email, &u.Pass, &created)

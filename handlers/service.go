@@ -3,23 +3,25 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"read2succeed/data"
+	"read2succeed/google_books"
 	"sort"
 	"strconv"
 	"text/template"
 	"time"
+
+	"github.com/gorilla/mux"
 
 	"github.com/gorilla/sessions"
 )
 
 // Service data struct
 type Service struct {
-	l       *log.Logger
-	store   *data.DataStore
-	readers *string
+	l     *log.Logger
+	store *data.DataStore
+	//readers *string
 	//session *sqlitestore.SqliteStore
 	session *sessions.CookieStore
 	t       *template.Template
@@ -254,35 +256,23 @@ func (s *Service) GetDailyStats(rw http.ResponseWriter, r *http.Request) {
 
 // Settings - display settings page
 func (s *Service) Settings(rw http.ResponseWriter, r *http.Request) {
-	isLoggedIn := s.IsLoggedIn(r)
-	if !isLoggedIn {
-		http.Redirect(rw, r, "/login", http.StatusFound)
-		return
-	}
+	user := r.Context().Value("user").(*data.AuthUser)
 
-	session, err := s.session.Get(r, "session")
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	userID := session.Values["user_id"].(int)
-
-	readers, err := s.store.GetUserReaders(userID)
+	readers, err := s.store.GetUserReaders(user.ID)
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	userGroups, err := s.store.GetUserGroups(userID)
+	userGroups, err := s.store.GetUserGroups(user.ID)
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	groupReaders, err := s.store.GetGroupsAndReaders(userID)
+	groupReaders, err := s.store.GetGroupsAndReaders(user.ID)
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -308,112 +298,76 @@ func (s *Service) Settings(rw http.ResponseWriter, r *http.Request) {
 
 // AddReader - add new reader
 func (s *Service) AddReader(rw http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(rw, "Invalid request", http.StatusBadRequest)
+
+	contentType := r.Header.Get("Content-Type")
+	log.Println(contentType)
+
+	if contentType != "application/json" {
+		http.Error(rw, "Invalid request: expecting JSON.", http.StatusBadRequest)
 		return
 	}
-	session, err := s.session.Get(r, "session")
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	newReader := &data.Reader{}
+	err := decoder.Decode(newReader)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	contentType := r.Header["Content-Type"]
-	log.Println(contentType, len(contentType) == 1, contentType[0])
-
-	if !s.IsLoggedIn(r) {
+		log.Println(err)
 		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
 		return
 	}
 
-	if len(contentType) == 1 && contentType[0] == "application/json" {
+	user := r.Context().Value("user").(*data.AuthUser)
 
-		decoder := json.NewDecoder(r.Body)
-		defer r.Body.Close()
-
-		newReader := &data.Reader{}
-		err := decoder.Decode(newReader)
-		if err != nil {
-			log.Println(err)
-			http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
-			return
-		}
-
-		userID, _ := session.Values["user_id"].(int)
-		newReader.UserID = userID
-		log.Println(newReader)
-		err = s.store.AddReader(newReader)
-		if err != nil {
-			s.l.Printf("AddReader(%d, %s):", userID, newReader.Name)
-			s.l.Println(err)
-			http.Error(rw, "{\"status\":\"error\", \"message\":\"Unable to add reader\"}", http.StatusInternalServerError)
-			return
-		}
-
-		rw.Write([]byte("{\"status\":\"ok\"}"))
+	newReader.UserID = user.ID
+	log.Println(newReader)
+	err = s.store.AddReader(newReader)
+	if err != nil {
+		s.l.Printf("AddReader(%d, %s):", user.ID, newReader.Name)
+		s.l.Println(err)
+		http.Error(rw, "{\"status\":\"error\", \"message\":\"Unable to add reader\"}", http.StatusInternalServerError)
 		return
 	}
+
+	rw.Write([]byte("{\"status\":\"ok\"}"))
 }
 
 // AddGroup - add new group
 func (s *Service) AddGroup(rw http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(rw, "Invalid request", http.StatusBadRequest)
+	contentType := r.Header.Get("Content-Type")
+	if contentType != "application/json" {
+		http.Error(rw, "Invalid request: expecting JSON.", http.StatusBadRequest)
 		return
 	}
-	session, err := s.session.Get(r, "session")
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
 
-	if !s.IsLoggedIn(r) {
+	newGroup := &data.Group{}
+	err := decoder.Decode(newGroup)
+	if err != nil {
+		log.Println(err)
 		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
 		return
 	}
 
-	contentType := r.Header["Content-Type"]
-	//log.Println(contentType, len(contentType) == 1, contentType[0])
-	if len(contentType) == 1 && contentType[0] == "application/json" {
-		decoder := json.NewDecoder(r.Body)
-		defer r.Body.Close()
-
-		newGroup := &data.Group{}
-		err := decoder.Decode(newGroup)
-		if err != nil {
-			log.Println(err)
-			http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
-			return
-		}
-
-		userID, _ := session.Values["user_id"].(int)
-		newGroup.UserID = userID
-		log.Println(newGroup)
-		err = s.store.AddGroup(newGroup)
-		if err != nil {
-			s.l.Printf("AddGroup(%d, %s):", userID, newGroup.Name)
-			s.l.Println(err)
-			http.Error(rw, "{\"status\":\"error\", \"message\":\"Unable to add group\"}", http.StatusInternalServerError)
-			return
-		}
-
-		rw.Write([]byte("{\"status\":\"ok\"}"))
+	user := r.Context().Value("user").(*data.AuthUser)
+	newGroup.UserID = user.ID
+	log.Println(newGroup)
+	err = s.store.AddGroup(newGroup)
+	if err != nil {
+		s.l.Printf("AddGroup(%d, %s):", user.ID, newGroup.Name)
+		s.l.Println(err)
+		http.Error(rw, "{\"status\":\"error\", \"message\":\"Unable to add group\"}", http.StatusInternalServerError)
+		return
 	}
+
+	rw.Write([]byte("{\"status\":\"ok\"}"))
 }
 
 // UpdateGroup - update the given group
 func (s *Service) UpdateGroup(rw http.ResponseWriter, r *http.Request) {
 
-	if !s.IsLoggedIn(r) {
-		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
-		return
-	}
-	session, err := s.session.Get(r, "session")
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
+	user := r.Context().Value("user").(*data.AuthUser)
 	vars := mux.Vars(r)
 	fmt.Printf("vars: %+v\n", vars)
 
@@ -431,9 +385,8 @@ func (s *Service) UpdateGroup(rw http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("groupbyid: %v\n", group)
 
-	userID, _ := session.Values["user_id"].(int)
-	fmt.Println("about to compare", userID, "with", group.UserID)
-	if group.UserID != userID {
+	fmt.Println("about to compare", user.ID, "with", group.UserID)
+	if group.UserID != user.ID {
 		s.l.Println(err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
@@ -459,14 +412,14 @@ func (s *Service) UpdateGroup(rw http.ResponseWriter, r *http.Request) {
 		changed = true
 	}
 	if changed {
-		s.l.Printf("about to upgrade: %+v", group)
+		s.l.Printf("about to update: %+v", group)
 		if err = s.store.UpdateGroup(&group); err != nil {
 			s.l.Println("UpdateGroup:", err)
 			http.Error(rw, "{\"status\":\"error\", \"message\":\"Unable to update group\"}", http.StatusBadRequest)
 			return
 		}
-		rw.Write([]byte("{\"status\":\"ok\"}"))
 	}
+	rw.Write([]byte("{\"status\":\"ok\"}"))
 }
 
 // About - about this site
@@ -474,4 +427,121 @@ func (s *Service) About(rw http.ResponseWriter, r *http.Request) {
 	if err := s.t.ExecuteTemplate(rw, "about.gohtml", nil); err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (s *Service) SearchGoogleBooks(rw http.ResponseWriter, r *http.Request) {
+
+	uri := r.URL.Path
+	log.Println("path:", uri)
+
+	//vars := mux.Vars(r)
+	//log.Println("vars:", vars)
+	log.Println("query:", r.URL.Query())
+	query := r.URL.Query().Get("q")
+	log.Printf("q: [%s]", query)
+
+	// https://developers.google.com/books/docs/v1/using
+
+	result := google_books.DoSearch(query)
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Cache-Control", "no-cache")
+	rw.WriteHeader(http.StatusOK)
+	//rw.Write([]byte("{\"status\":\"ok\"}"))
+	json.NewEncoder(rw).Encode(result)
+}
+
+// Library - list or add books to user's library
+func (s *Service) Library(rw http.ResponseWriter, r *http.Request) {
+
+	isLoggedIn := s.IsLoggedIn(r)
+	if !isLoggedIn {
+		http.Redirect(rw, r, "/login", http.StatusFound)
+		return
+	}
+
+	session, err := s.session.Get(r, "session")
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	userID := session.Values["user_id"].(int)
+
+	books, err := s.store.QueryByUserID(userID)
+	if err != nil {
+		log.Println(err)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Books []data.Book
+	}{
+		Books: books,
+	}
+
+	if err := s.t.ExecuteTemplate(rw, "library.gohtml", data); err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// AddBook - add new book to user's library
+func (s *Service) AddBook(rw http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(rw, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if !s.IsLoggedIn(r) {
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+
+	session, _ := s.session.Get(r, "session")
+	contentType := r.Header.Get("Content-Type")
+	log.Println(contentType, len(contentType) == 1, contentType[0])
+	if contentType != "application/json" {
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+
+	newBook := data.NewBook{}
+	//byteValue, _ := ioutil.ReadAll(r.Body)
+	//s.l.Println("BODY:\n" + string(byteValue))
+	//err := json.Unmarshal(byteValue, &newBook)
+
+	r.Body = http.MaxBytesReader(rw, r.Body, 5120) // 5KB
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	defer r.Body.Close()
+
+	err := decoder.Decode(&newBook)
+	if err != nil {
+		log.Println(err)
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+
+	userIDv := session.Values["user_id"]
+	userID, _ := userIDv.(int)
+	newBook.UserID = userID
+	log.Println(newBook)
+	book, err := s.store.AddBook(newBook)
+	if err != nil {
+		log.Println(err)
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+
+	output := struct {
+		Status string `json:"status"`
+		Book   data.Book
+	}{
+		Status: "ok",
+		Book:   book,
+	}
+
+	encoder := json.NewEncoder(rw)
+	encoder.Encode(output)
 }

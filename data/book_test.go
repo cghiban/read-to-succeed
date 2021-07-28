@@ -39,8 +39,9 @@ func NewUnit(t *testing.T) (*log.Logger, *sql.DB, func()) {
 		id integer not null primary key,
 		user_id integer not null,
 		title text,
-		isbn text,
 		authors text,
+		isbn text,
+		thumb_url text,
 		added_on DATETIME);
 	CREATE INDEX books_ndx1 ON books(user_id);`
 
@@ -92,10 +93,11 @@ func TestBook(t *testing.T) {
 	userID := 1
 
 	nb := data.NewBook{
-		UserID:  userID,
-		Title:   "New Boook",
-		Authors: "A, B",
-		ISBN:    "12234",
+		UserID:   userID,
+		Title:    "New Boook",
+		Authors:  "A, B",
+		ThumbURL: "http://example.com/book_thumb.jpg",
+		ISBN:     "12234",
 	}
 
 	book, err := ds.AddBook(nb)

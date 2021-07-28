@@ -4,15 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/gorilla/csrf"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"read2succeed/data"
 	"read2succeed/handlers"
+	"read2succeed/web"
+	"syscall"
 	"time"
 
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/nicholasjackson/env"
 )
@@ -67,6 +69,11 @@ func main() {
 
 	r2sservice := handlers.NewService(l, dataStore, sessionKey)
 
+	// auth midleware...
+	authMw := handlers.Auth{
+		Service: r2sservice,
+	}
+
 	//sm := http.NewServeMux()
 	sm := mux.NewRouter()
 	getRouter := sm.Methods("GET").Subrouter()
@@ -75,13 +82,18 @@ func main() {
 	postRouter := sm.Methods("POST").Subrouter()
 	postRouter.HandleFunc("/add", r2sservice.AddReading)
 
-	sm.HandleFunc("/settings", r2sservice.Settings)
-	sm.HandleFunc("/addreader", r2sservice.AddReader)
-	sm.HandleFunc("/addgroup", r2sservice.AddGroup)
-	sm.HandleFunc("/updategroup/{id:[0-9]+}", r2sservice.UpdateGroup).Methods("POST").HeadersRegexp("Content-Type", "application/json")
+	sm.Handle("/settings", web.WrapMiddleware(r2sservice.Settings, authMw.UserViaSession, authMw.RequireUser))
+	sm.Handle("/addreader", web.WrapMiddleware(r2sservice.AddReader, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
+	sm.Handle("/addgroup", web.WrapMiddleware(r2sservice.AddGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
+	sm.Handle("/updategroup/{id:[0-9]+}", web.WrapMiddleware(r2sservice.UpdateGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST").HeadersRegexp("Content-Type", "application/json")
+
 	//sm.HandleFunc("/joingroup", r2sservice.JoinGroup)
 	sm.HandleFunc("/dailystats", r2sservice.GetDailyStats)
 	sm.HandleFunc("/about", r2sservice.About)
+
+	sm.HandleFunc("/search_books", r2sservice.SearchGoogleBooks)
+	sm.HandleFunc("/add_book", r2sservice.AddBook)
+	sm.HandleFunc("/library", r2sservice.Library)
 
 	//sm.HandleFunc("/register", r2sservice.UserSignUp)
 
@@ -115,9 +127,8 @@ func main() {
 		}
 	}()
 
-	sigChan := make(chan os.Signal)
-	signal.Notify(sigChan, os.Kill)
-	signal.Notify(sigChan, os.Interrupt)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	sig := <-sigChan
 	l.Println("Received terminate, graceful shutdown", sig)

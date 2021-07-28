@@ -46,7 +46,7 @@ type IndustryIdentifier struct {
 }
 
 type VolumeSearchResultError struct {
-	Status string       `json:"error"`
+	Status string       `json:"status"`
 	Error  ErrorDetails `json:"error"`
 }
 

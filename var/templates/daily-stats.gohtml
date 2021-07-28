@@ -1,14 +1,13 @@
 <!DOCTYPE html>
-
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inconsolata">
-        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-        <link rel="stylesheet" href="/static/styles.css">
-        <title>Reading Log - Read to Succeed</title>
-    </head>
+  <head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inconsolata">
+	<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+	<link rel="stylesheet" href="/static/styles.css">
+	<title>Reading Log - Read to Succeed</title>
+  </head>
   <body>
     <div class="welcome-center">
       <select id="readers">
@@ -18,11 +17,9 @@
       <option value="{{.Name}}" {{if eq .Name $cr}}selected{{end}}>{{.ID}}.{{.Name}}</option>
   {{ end }}
       </select>
-      <a href="/library" title="my books"><span class="material-icons">book</span></a>
       <a href="#" id="addentry" title="add reading"><span class="material-icons">add_circle</span></a>
       <a href="#" id="togglestats" title="stats"><span class="material-icons">show_chart</span></a>
       <a href="/settings" title="settings"><span class="material-icons">manage_accounts</span></a>
-      <a href="/logout"><span class="material-icons">exit_to_app</span></a>
     </div>
 
     <div id="stats" hidden>
@@ -32,32 +29,27 @@
         <li><label>{{ .ReaderName }}</label> {{ .TotalDuration }}</li>
       {{ end }}
       </ul>
-      <div><a href="/dailystats">View last 30 days</a></div>
     </div>
 
 <div style="overflow-x:auto;">
   <table>
     <thead>
     <tr>
-      <th>#</th>
-      <th>Reader</th>
-      <th>Author</th>
-      <th>Title</th>
       <th>Day</th>
-      <th>Duration</th>
-      <th>Added on</th>
+      <th>Readers</th>
     </tr>
     </thead>
     <tbody>
-  {{ range .Readings}}
+  {{ $dailyStats := .DailyStats }}
+  {{ range .Days}}
+  {{ $readers := index $dailyStats . }}
   <tr>
-      <td>{{.ID}}</td>
-      <td>{{.ReaderName}}</td>
-      <td>{{.BookAuthor}}</td>
-      <td>{{.BookTitle}}</td>
-      <td>{{dayToDate .Day}}</td>
-      <td>{{.Duration}}m</td>
-      <td>{{dateISOish .CreatedOn}}</td>
+      <td>{{.}}</td>
+	  <td>{{ range $readers }}
+		  {{ if ne .ReaderName "-"}}
+		  <div>{{ .ReaderName }}: {{ .Value }}</div>
+          {{ end }}
+      {{end}}</td>
   </tr>
   {{ end }}
   <tbody>
