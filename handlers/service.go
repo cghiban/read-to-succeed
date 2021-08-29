@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -28,7 +29,7 @@ type Service struct {
 }
 
 // NewService initializes a new Serivice
-func NewService(l *log.Logger, store *data.DataStore, sessionKey *string) *Service {
+func NewService(l *log.Logger, store *data.DataStore, sessionKey *string, resources embed.FS) *Service {
 	// init template
 	funcMap := template.FuncMap{
 		"dayToDate": func(s string) string {
@@ -40,8 +41,9 @@ func NewService(l *log.Logger, store *data.DataStore, sessionKey *string) *Servi
 		},
 		"dateISOish": func(t time.Time) string { return t.Format("2006-01-02 3:04pm") },
 	}
-	templates := template.Must(template.New("tmpls").Funcs(funcMap).ParseGlob("var/templates/*.gohtml"))
-	//templates = templates.Funcs(funcMap)
+
+	//templates := template.Must(template.New("tmpls").Funcs(funcMap).ParseGlob("var/templates/*.gohtml"))
+	templates := template.Must(template.New("tmpls").Funcs(funcMap).ParseFS(resources, "var/templates/*.gohtml"))
 
 	sessStore := sessions.NewCookieStore([]byte(*sessionKey))
 	/*sessStore, err := sqlitestore.NewSqliteStoreFromConnection(store.DB, "sessions", "/", 86400, []byte(*sessionKey))

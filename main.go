@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -18,6 +20,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/nicholasjackson/env"
 )
+
+//go:embed var/templates/* var/static
+var resources embed.FS
 
 var dataStore *data.DataStore
 
@@ -67,7 +72,7 @@ func main() {
 
 	//return
 
-	r2sservice := handlers.NewService(l, dataStore, sessionKey)
+	r2sservice := handlers.NewService(l, dataStore, sessionKey, resources)
 
 	// auth midleware...
 	authMw := handlers.Auth{
@@ -105,11 +110,14 @@ func main() {
 	userRouter.HandleFunc("/login", r2sservice.UserLogIn)
 	userRouter.HandleFunc("/logout", r2sservice.UserLogOut)
 
-	sm.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("var/static/"))))
+	//sm.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("var/static/"))))
 
-	//sm.Handle("/", r2sservice)
-	//sm.Handle("/readings/", r2sservice)
-	//sm.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("var/static/"))))
+	staticFS, err := fs.Sub(resources, "var/static")
+	if err != nil {
+		l.Fatalln(err)
+	}
+
+	sm.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 	sm.Handle("/favicon.ico", http.NotFoundHandler())
 
 	s := &http.Server{
