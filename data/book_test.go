@@ -29,7 +29,7 @@ func NewUnit(t *testing.T) (*log.Logger, *sql.DB, func()) {
 	old := os.Stdout
 	os.Stdout = w
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", ":memory:?_loc=auto")
 	if err != nil {
 		panic(err)
 	}
@@ -110,7 +110,7 @@ func TestBook(t *testing.T) {
 
 	testID++
 
-	books, err := ds.QueryByUserID(userID)
+	books, err := ds.QueryBookByUserID(userID)
 	if err != nil {
 		t.Fatalf("\t%s\tTest %d:\tShould be able to retrieve user's book : %s.", Failed, testID, err)
 	}
@@ -122,6 +122,36 @@ func TestBook(t *testing.T) {
 		t.Fatalf("\t%s\tTest %d:\tShould get back the same book. Diff:\n%s", Failed, testID, diff)
 	}
 	t.Logf("\t%s\tTest %d:\tShould get back the same book.", Success, testID)
+
+	testID++
+
+	upd := data.UpdateBook{
+		Authors:  "Geronimo Stilton",
+		Title:    "Field Trip to Niagra Falls",
+		ThumbURL: book.ThumbURL,
+		ISBN:     "978-0-439-69146-8",
+	}
+
+	err = ds.UpdateBook(book.ID, upd)
+	if err != nil {
+		t.Fatalf("\t%s\tTest %d:\tShould be able to update the book : %s.", Failed, testID, err)
+	}
+	t.Logf("\t%s\tTest %d:\tShould be able to update the book.", Success, testID)
+
+	updated, err := ds.QueryBookByID(book.ID)
+	if err != nil {
+		t.Fatalf("\t%s\tTest %d:\tShould be able to retrieve book by ID : %s.", Failed, testID, err)
+	}
+	t.Logf("\t%s\tTest %d:\tShould be able to retrieve book by ID.", Success, testID)
+
+	if updated.Authors != upd.Authors {
+		t.Fatalf("\t%s\tTest %d:\tShould be able to update book authors:\n\tGot: %s\n\tWanted: %s",
+			Failed, testID, updated.Authors, upd.Authors)
+	}
+	if updated.Title != upd.Title {
+		t.Fatalf("\t%s\tTest %d:\tShould be able to update book title:\n\tGot: %s\n\tWanted: %s",
+			Failed, testID, updated.Title, upd.Title)
+	}
 
 	log.Println("done testing..")
 }

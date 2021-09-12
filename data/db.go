@@ -56,12 +56,17 @@ type Readers []Reader
 
 // Group ...
 type Group struct {
-	ID         int
-	UserID     int
-	Name       string
-	AccessCode string
-	Status     string
-	CreatedOn  time.Time
+	ID         int       `json:"id,omitempty"`
+	UserID     int       `json:"-"`
+	Name       string    `json:"name"`
+	AccessCode string    `json:"-"`
+	Status     string    `json:"-"`
+	CreatedOn  time.Time `json:"-"`
+}
+
+type UpdateGroup struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
 }
 
 // GroupReaders ...
@@ -445,9 +450,7 @@ func (ds *DataStore) GetReaderByName(name string) (Reader, error) {
 
 // AddGroup - add new group
 func (ds *DataStore) AddGroup(g *Group) error {
-	query := `
-	INSERT INTO groups (user_id, name, code)
-	VALUES (?, ?, ?)`
+	query := `INSERT INTO groups (user_id, name, code, created) VALUES (?, ?, ?, ?)`
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
 		return err
@@ -456,8 +459,9 @@ func (ds *DataStore) AddGroup(g *Group) error {
 
 	rand.Seed(time.Now().UnixNano())
 	g.AccessCode = utils.RandStringRunes(5)
+	g.CreatedOn = time.Now().Truncate(time.Second)
 
-	res, err := stmt.Exec(g.UserID, g.Name, g.AccessCode)
+	res, err := stmt.Exec(g.UserID, g.Name, g.AccessCode, g.CreatedOn)
 	if err != nil {
 		return err
 	}
@@ -474,7 +478,7 @@ func (ds *DataStore) AddGroup(g *Group) error {
 }
 
 // UpdateGroup - update group
-func (ds *DataStore) UpdateGroup(g *Group) error {
+func (ds *DataStore) UpdateGroup(groupID int, ug UpdateGroup) error {
 	query := `UPDATE groups SET name = ?, status = ? WHERE id = ?`
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
@@ -482,7 +486,7 @@ func (ds *DataStore) UpdateGroup(g *Group) error {
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(g.Name, g.Status, g.ID)
+	res, err := stmt.Exec(ug.Name, ug.Status, groupID)
 	if err != nil {
 		return err
 	}
@@ -568,8 +572,11 @@ func (ds *DataStore) GetUserGroups(userID int) ([]Group, error) {
 	var gID, gName, gCode, gStatus, gCreated string
 
 	for rows.Next() {
-		rows.Scan(&gID, &gName, &gCode, &gStatus, gCreated)
-		t, _ := time.Parse("2006-01-02T15:04:05Z", gCreated)
+		rows.Scan(&gID, &gName, &gCode, &gStatus, &gCreated)
+		t, err := time.Parse("2006-01-02T15:04:05Z07:00", gCreated)
+		if err != nil {
+			ds.L.Println("timeParse: ", err.Error())
+		}
 		groupID, _ := strconv.Atoi(gID)
 
 		groups = append(groups, Group{
@@ -596,11 +603,41 @@ func (ds *DataStore) GetGroupByID(groupID int) (Group, error) {
 
 	err := row.Scan(&g.Name, &gUserID, &g.AccessCode, &g.Status, &gCreated)
 	if err != nil {
-		return g, nil
+		return g, err
 	}
 	g.UserID, _ = strconv.Atoi(gUserID)
-	g.CreatedOn, _ = time.Parse("2006-01-02T15:04:05Z", gCreated)
+	g.CreatedOn, _ = time.Parse("2006-01-02T15:04:05Z07:00", gCreated)
 	g.ID = groupID
 
 	return g, nil
+}
+
+// FindGroups - find groups base on a query
+func (ds *DataStore) FindGroups(q string) ([]Group, error) {
+
+	query := `SELECT id, name, user_id, code, status, created
+		FROM groups
+		WHERE (status='public' AND name LIKE '%'|| ? ||'%') OR code = ?`
+	fmt.Printf("%s [%s, %s]\n", query, fmt.Sprintf("%%%s%%", q), q)
+
+	groups := []Group{}
+	var g Group
+	var gCreated string
+
+	//rows, err := ds.DB.Query(query, fmt.Sprintf("%%%s%%", q))
+	rows, err := ds.DB.Query(query, q, q)
+	if err != nil {
+		return []Group{}, err
+	}
+
+	for rows.Next() {
+		err = rows.Scan(&g.ID, &g.Name, &g.UserID, &g.AccessCode, &g.Status, &gCreated)
+		fmt.Println("in for err: ", err)
+		if err != nil {
+			return []Group{}, err
+		}
+		g.CreatedOn, _ = time.Parse("2006-01-02T15:04:05Z07:00", gCreated)
+		groups = append(groups, g)
+	}
+	return groups, nil
 }

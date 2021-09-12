@@ -3,6 +3,7 @@ package handlers
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -293,6 +294,7 @@ func (s *Service) Settings(rw http.ResponseWriter, r *http.Request) {
 
 	log.Printf("data:%v+\n", data)
 
+	rw.Header().Set("Cache-Control", "no-cache")
 	if err := s.t.ExecuteTemplate(rw, "settings.gohtml", data); err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
@@ -371,9 +373,7 @@ func (s *Service) UpdateGroup(rw http.ResponseWriter, r *http.Request) {
 
 	user := r.Context().Value("user").(*data.AuthUser)
 	vars := mux.Vars(r)
-	fmt.Printf("vars: %+v\n", vars)
 
-	//contentType == "application/json"
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 
@@ -385,43 +385,67 @@ func (s *Service) UpdateGroup(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("groupbyid: %v\n", group)
-
-	fmt.Println("about to compare", user.ID, "with", group.UserID)
+	//fmt.Printf("groupbyid: %v\n", group)
+	//fmt.Println("about to compare", user.ID, "with", group.UserID)
 	if group.UserID != user.ID {
-		s.l.Println(err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		err := errors.New("not allowed")
+		http.Error(rw, err.Error(), http.StatusMethodNotAllowed)
 		return
 	}
 
-	someGroup := &data.Group{}
-	if err := decoder.Decode(someGroup); err != nil {
+	updGroup := data.UpdateGroup{}
+	if err := decoder.Decode(&updGroup); err != nil {
 		log.Println(err)
 		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
 		return
 	}
-	//s.l.Printf("someGroup: %+v", someGroup)
+	//s.l.Printf("updGroup: %+v", updGroup)
+	if updGroup.Name == "" {
+		updGroup.Name = group.Name
+	}
+	if updGroup.Status == "" {
+		updGroup.Status = group.Status
+	}
 
-	var changed bool
-	if someGroup.Name != "" && someGroup.Name != group.Name {
-		//fmt.Println("about to update Name:", someGroup.Name, "=>", group.Name)
-		group.Name = someGroup.Name
-		changed = true
+	if err = s.store.UpdateGroup(group.ID, updGroup); err != nil {
+		s.l.Println("UpdateGroup:", err)
+		http.Error(rw, "{\"status\":\"error\", \"message\":\"Unable to update group\"}", http.StatusBadRequest)
+		return
 	}
-	if someGroup.Status != "" && someGroup.Status != group.Status {
-		//fmt.Println("about to update Status:", group.Status, "=>", someGroup.Status)
-		group.Status = someGroup.Status
-		changed = true
-	}
-	if changed {
-		s.l.Printf("about to update: %+v", group)
-		if err = s.store.UpdateGroup(&group); err != nil {
-			s.l.Println("UpdateGroup:", err)
-			http.Error(rw, "{\"status\":\"error\", \"message\":\"Unable to update group\"}", http.StatusBadRequest)
-			return
-		}
-	}
+
 	rw.Write([]byte("{\"status\":\"ok\"}"))
+}
+
+// FindGroup - update the given group
+func (s *Service) FindGroup(rw http.ResponseWriter, r *http.Request) {
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Cache-Control", "no-cache")
+
+	//user := r.Context().Value("user").(*data.AuthUser)
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	params := struct {
+		Query string `json:"name"`
+	}{}
+	if err := decoder.Decode(&params); err != nil {
+		log.Println(err)
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Printf("params: %+v", params)
+	groups, err := s.store.FindGroups(params.Query)
+	if err != nil {
+		log.Println(err)
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusInternalServerError)
+		return
+	}
+	fmt.Printf("groups: %+v", groups)
+	encoder := json.NewEncoder(rw)
+	encoder.Encode(groups)
+
+	//rw.Write([]byte(`{"ok":"1"}`))
 }
 
 // About - about this site
@@ -470,7 +494,7 @@ func (s *Service) Library(rw http.ResponseWriter, r *http.Request) {
 
 	userID := session.Values["user_id"].(int)
 
-	books, err := s.store.QueryByUserID(userID)
+	books, err := s.store.QueryBookByUserID(userID)
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)

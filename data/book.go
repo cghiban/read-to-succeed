@@ -1,6 +1,7 @@
 package data
 
 import (
+	"log"
 	"time"
 )
 
@@ -42,14 +43,15 @@ func (ds *DataStore) AddBook(nb NewBook) (Book, error) {
 	}
 	defer stmt.Close()
 
-	now := time.Now().UTC().Round(time.Second)
+	now := time.Now().Round(time.Second)
 
-	res, err := stmt.Exec(nb.UserID, nb.Title, nb.Authors, nb.ISBN, nb.ThumbURL, now.Format("2006-01-02T15:04:05Z"))
+	res, err := stmt.Exec(nb.UserID, nb.Title, nb.Authors, nb.ISBN, nb.ThumbURL, now.Format("2006-01-02T15:04:05Z07:00"))
 	if err != nil {
 		return Book{}, err
 	}
-	rowNum, _ := res.RowsAffected()
-	ds.L.Println(" -- added new book to DB: ", rowNum)
+	//log.Printf("now: %s", now.Format("2006-01-02T15:04:05Z07:00"))
+	//rowNum, _ := res.RowsAffected()
+	//ds.L.Println(" -- added new book to DB: ", rowNum)
 
 	id, err := res.LastInsertId()
 	if err != nil {
@@ -68,8 +70,8 @@ func (ds *DataStore) AddBook(nb NewBook) (Book, error) {
 	return bk, nil
 }
 
-// QueryByUserID - retrieve the user's books from the db
-func (ds *DataStore) QueryByUserID(userID int) ([]Book, error) {
+// QueryBookByUserID - retrieve user's books from the db
+func (ds *DataStore) QueryBookByUserID(userID int) ([]Book, error) {
 
 	query := `
 	SELECT id, user_id, title, authors, isbn, thumb_url, added_on
@@ -87,11 +89,64 @@ func (ds *DataStore) QueryByUserID(userID int) ([]Book, error) {
 	for rows.Next() {
 		rows.Scan(&b.ID, &b.UserID, &b.Title, &b.Authors, &b.ISBN, &b.ThumbURL, &added)
 
-		t, _ := time.Parse("2006-01-02T15:04:05Z", added)
+		//log.Printf("added: %s", added)
+		t, err := time.Parse("2006-01-02T15:04:05Z07:00", added)
+		if err != nil {
+			log.Panicln(err)
+		}
+
+		//log.Printf("t: %s", t.Format("2006-01-02T15:04:05Z07:00"))
 		b.AddedOn = t.Local()
 
 		books = append(books, b)
 	}
 
 	return books, nil
+}
+
+// QueryBookByID - retrieve given book
+func (ds *DataStore) QueryBookByID(bookID int) (Book, error) {
+	query := `
+	SELECT id, user_id, title, authors, isbn, thumb_url, added_on
+	FROM books WHERE id = ?`
+
+	row := ds.DB.QueryRow(query, bookID)
+
+	var book Book
+	var added string
+	err := row.Scan(&book.ID, &book.UserID, &book.Title, &book.Authors, &book.ISBN, &book.ThumbURL, &added)
+	if err != nil {
+		return book, err
+	}
+	t, _ := time.Parse("2006-01-02T15:04:05Z07:00", added)
+	book.AddedOn = t
+
+	return book, nil
+}
+
+// UpdateBook - retrieve the user's books from the db
+func (ds *DataStore) UpdateBook(bookID int, ub UpdateBook) error {
+
+	/*book, err := ds.QueryBookByID(bookID)
+	if err != nil {
+		return book, err
+	}*/
+
+	query := `
+		UPDATE books
+		SET authors = ?, title = ?,  isbn = ?, thumb_url = ?
+		WHERE id = ?`
+	stmt, err := ds.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	//fmt.Println(query, []interface{}{ub.Authors, ub.Title, ub.ISBN, ub.ThumbURL, bookID})
+	_, err = stmt.Exec(ub.Authors, ub.Title, ub.ISBN, ub.ThumbURL, bookID)
+	if err != nil {
+		return err
+	}
+
+	return err
 }

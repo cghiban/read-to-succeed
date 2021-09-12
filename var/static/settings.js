@@ -17,6 +17,15 @@ document.querySelector("#newgroup").addEventListener('click', (ev) => {
     ev.preventDefault();
 });
 
+document.querySelector("#joinagroup").addEventListener('click', (ev) => {
+    //reader.value = readers.value;
+    modal = document.querySelector("#joinGroupModal");
+    modal.style.display = "block";
+    //document.querySelector('input[name=name]').focus();
+    document.querySelector('#findgroup input[name=name]').focus();
+    ev.preventDefault();
+});
+
 async function postData(url = '', data = {}) {
     // Default options are marked with *
     const response = await fetch(url, {
@@ -57,6 +66,10 @@ document.querySelectorAll('form button').forEach( btn => {
         console.log(action, data);
 
         ev.preventDefault();
+        if (action === "findgroup") {
+            doSearchGroups('/findgroup', data);
+            return;
+        }
         postData('/' + action, data)
             .then(data => {
                 console.log(data); // JSON data parsed by `data.json()` call
@@ -92,6 +105,51 @@ document.querySelectorAll('#usergroups input[type=checkbox]').forEach( cb => {
             });
     });
 });
+
+var _dbg;
+let doSearchGroups = function(endpoint, params) {
+    console.info("doing the search...", params);
+
+    let grouplist_div = document.querySelector("#grouplist");
+    grouplist_div.childNodes.forEach(e => e.remove());
+
+    postData("/findgroup", params)
+        .then(data => {
+            console.log("---------");
+            console.log(data);
+            _dbg = data;
+            let ul = document.createElement("ul");
+                //li = document.createElement("li");
+            data.forEach(item => {
+                console.log(item);
+                let li = document.createElement("li");
+                li.innerHTML = item["name"] + " &nbsp; ";
+                //let div_title = document.createElement("div");
+                let add_link = document.createElement("a");
+                add_link.appendChild(document.createTextNode("join group"));
+                add_link.href="#";
+                li.appendChild(add_link);
+                add_link.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    console.log(" clicked.." + item["id"]);
+                });
+                ul.appendChild(li);
+            });
+            grouplist_div.appendChild(ul);
+            
+            /*console.log("totalItems:", data["totalItems"]);
+            //search_icon.classList.remove("blink");
+            if (data["items"] && data["items"].length > 0) {
+                //console.log("items[0]:", data["items"][0]);
+                displayResults(data["items"]);
+            }
+            else {
+                // no results
+                results_div.innerHTML = "<p><small>Nothing found for this query</small></p>";
+                add_manually_link.style.display = "block";
+            }*/
+	    });
+};
 
 // When the user clicks on <span> (x), close the modal
 document.querySelectorAll('span.close').forEach( s => {

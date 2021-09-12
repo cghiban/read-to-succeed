@@ -4,6 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inconsolata">
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <link rel="stylesheet" href="/static/styles.css">
@@ -75,7 +76,7 @@
     </thead>
     <tbody>
     <tr>
-      <td colspan="2"><a href="#">Join a new group</a></td>
+      <td colspan="2"><a href="#" id="joinagroup">Join a new group</a></td>
     </tr>
   {{ range $key, $value := .GroupReaders}}
   <tr>
@@ -125,6 +126,23 @@
             <label></label>
             <button>add</button>
           </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- The Join Group Modal -->
+    <div id="joinGroupModal" class="modal">
+      <!-- Modal content -->
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Join a group</h3>
+        <form id="findgroup">
+          <div>
+            <label style="display:block; width:100%;">Search by name or code</label>
+            <input type="text" name="name" required>
+            <button>search</button>
+          </div>
+          <div id="grouplist"></div>
         </form>
       </div>
     </div>

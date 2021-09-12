@@ -252,6 +252,8 @@ window.addEventListener("load", (ev) => {
             console.log(data); // JSON data parsed by `data.json()` call)
             if (data && data.status === "ok") {
               e.target.style.display = "none";
+              document.querySelector("#myModal").style.display = "none";
+              document.location.reload();
             }
           });
       });
