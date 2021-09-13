@@ -20,7 +20,7 @@
     </div>
 
 <div style="float: left;">
-  <table>
+  <table id="readerslist">
     <thead>
     <tr>
       <th>#</th>
@@ -136,8 +136,13 @@
       <div class="modal-content">
         <span class="close">&times;</span>
         <h3>Join a group</h3>
-        <form id="findgroup">
-          <div>
+        <form id="findgroups">
+        <div>
+            <label style="display:block; width:100%;">Choose a reader</label>
+            <select name="groupreader" required>
+            </select>
+        </div>
+          <div id="group-search-options">
             <label style="display:block; width:100%;">Search by name or code</label>
             <input type="text" name="name" required>
             <button>search</button>

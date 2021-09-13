@@ -416,8 +416,8 @@ func (s *Service) UpdateGroup(rw http.ResponseWriter, r *http.Request) {
 	rw.Write([]byte("{\"status\":\"ok\"}"))
 }
 
-// FindGroup - update the given group
-func (s *Service) FindGroup(rw http.ResponseWriter, r *http.Request) {
+// FindAvailableGroups - find group a reader can join to
+func (s *Service) FindAvailableGroups(rw http.ResponseWriter, r *http.Request) {
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.Header().Set("Cache-Control", "no-cache")
@@ -426,7 +426,8 @@ func (s *Service) FindGroup(rw http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 	params := struct {
-		Query string `json:"name"`
+		Query    string `json:"name"`
+		ReaderID int    `json:"reader"`
 	}{}
 	if err := decoder.Decode(&params); err != nil {
 		log.Println(err)
@@ -435,7 +436,7 @@ func (s *Service) FindGroup(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("params: %+v", params)
-	groups, err := s.store.FindGroups(params.Query)
+	groups, err := s.store.FindNewGroupsForReader(params.Query, params.ReaderID)
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, "{\"status\":\"error\"}", http.StatusInternalServerError)

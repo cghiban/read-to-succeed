@@ -612,12 +612,18 @@ func (ds *DataStore) GetGroupByID(groupID int) (Group, error) {
 	return g, nil
 }
 
-// FindGroups - find groups base on a query
-func (ds *DataStore) FindGroups(q string) ([]Group, error) {
+// FindNewGroupsForReader - find groups base on a query
+func (ds *DataStore) FindNewGroupsForReader(q string, readerID int) ([]Group, error) {
 
-	query := `SELECT id, name, user_id, code, status, created
-		FROM groups
-		WHERE (status='public' AND name LIKE '%'|| ? ||'%') OR code = ?`
+	query := `
+	WITH readers_groups AS (
+		SELECT group_id FROM group_readers WHERE reader_id = ?
+	)
+	SELECT g.id, g.name, g.status
+	FROM groups g 
+	LEFT JOIN readers_groups rg ON g.id = rg.group_id 
+	WHERE rg.group_ID IS NULL 
+		AND ((status='public' AND name LIKE '%'|| ? ||'%') OR code = ?)`
 	fmt.Printf("%s [%s, %s]\n", query, fmt.Sprintf("%%%s%%", q), q)
 
 	groups := []Group{}
@@ -625,15 +631,15 @@ func (ds *DataStore) FindGroups(q string) ([]Group, error) {
 	var gCreated string
 
 	//rows, err := ds.DB.Query(query, fmt.Sprintf("%%%s%%", q))
-	rows, err := ds.DB.Query(query, q, q)
+	rows, err := ds.DB.Query(query, readerID, q, q)
 	if err != nil {
 		return []Group{}, err
 	}
 
 	for rows.Next() {
-		err = rows.Scan(&g.ID, &g.Name, &g.UserID, &g.AccessCode, &g.Status, &gCreated)
-		fmt.Println("in for err: ", err)
+		err = rows.Scan(&g.ID, &g.Name, &g.Status)
 		if err != nil {
+			fmt.Println("in for err: ", err)
 			return []Group{}, err
 		}
 		g.CreatedOn, _ = time.Parse("2006-01-02T15:04:05Z07:00", gCreated)

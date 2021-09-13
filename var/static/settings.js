@@ -22,9 +22,22 @@ document.querySelector("#joinagroup").addEventListener('click', (ev) => {
     modal = document.querySelector("#joinGroupModal");
     modal.style.display = "block";
     //document.querySelector('input[name=name]').focus();
-    document.querySelector('#findgroup input[name=name]').focus();
+    document.querySelector('#findgroups input[name=name]').focus();
     ev.preventDefault();
-});
+
+    // populate select w/ readers
+    let groupreader_select = document.querySelector("select[name=groupreader]");
+    groupreader_select.childNodes.forEach(e => e.remove());
+    let tRows = document.querySelector("#readerslist").rows;
+    for (let i = 1; i < tRows.length; i++) {
+        const row = tRows[i],
+            cells = row.cells;
+        const o = document.createElement("option");
+        o.value = cells[0].innerText;
+        o.innerText = cells[1].innerText;
+        groupreader_select.appendChild(o);
+    }
+})
 
 async function postData(url = '', data = {}) {
     // Default options are marked with *
@@ -66,8 +79,9 @@ document.querySelectorAll('form button').forEach( btn => {
         console.log(action, data);
 
         ev.preventDefault();
-        if (action === "findgroup") {
-            doSearchGroups('/findgroup', data);
+        if (action === "findgroups") {
+            data["reader"] = parseInt(formData.get("groupreader"), 10);
+            doSearchGroups(data);
             return;
         }
         postData('/' + action, data)
@@ -106,18 +120,22 @@ document.querySelectorAll('#usergroups input[type=checkbox]').forEach( cb => {
     });
 });
 
-var _dbg;
-let doSearchGroups = function(endpoint, params) {
+//var _dbg;
+let doSearchGroups = function(params) {
     console.info("doing the search...", params);
 
     let grouplist_div = document.querySelector("#grouplist");
     grouplist_div.childNodes.forEach(e => e.remove());
 
-    postData("/findgroup", params)
+    postData("/findgroups", params)
         .then(data => {
-            console.log("---------");
+            //console.log("---------");
             console.log(data);
-            _dbg = data;
+            // _dbg = data;
+            if (data.length == 0){
+                grouplist_div.innerHTML = "<p><small>Nothing found for this query</small></p>";
+                return
+            }
             let ul = document.createElement("ul");
                 //li = document.createElement("li");
             data.forEach(item => {
@@ -136,18 +154,6 @@ let doSearchGroups = function(endpoint, params) {
                 ul.appendChild(li);
             });
             grouplist_div.appendChild(ul);
-            
-            /*console.log("totalItems:", data["totalItems"]);
-            //search_icon.classList.remove("blink");
-            if (data["items"] && data["items"].length > 0) {
-                //console.log("items[0]:", data["items"][0]);
-                displayResults(data["items"]);
-            }
-            else {
-                // no results
-                results_div.innerHTML = "<p><small>Nothing found for this query</small></p>";
-                add_manually_link.style.display = "block";
-            }*/
 	    });
 };
 
