@@ -449,6 +449,60 @@ func (s *Service) FindAvailableGroups(rw http.ResponseWriter, r *http.Request) {
 	//rw.Write([]byte(`{"ok":"1"}`))
 }
 
+// JoinGroup - find group a reader can join to
+func (s *Service) JoinGroup(rw http.ResponseWriter, r *http.Request) {
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Cache-Control", "no-cache")
+
+	//user := r.Context().Value("user").(*data.AuthUser)
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	params := struct {
+		GroupID  int `json:"group"`
+		ReaderID int `json:"reader"`
+	}{}
+	if err := decoder.Decode(&params); err != nil {
+		log.Println(err)
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Printf("params: %+v\n", params)
+
+	group, err := s.store.GetGroupByID(params.GroupID)
+	if err != nil {
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+	user := r.Context().Value("user").(*data.AuthUser)
+
+	/*if group.UserID != user.ID {
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusNotFound)
+		return
+	}*/
+
+	reader, err := s.store.GetReaderByID(params.ReaderID)
+	if err != nil {
+		s.l.Println(err.Error())
+		http.Error(rw, `{"status":"error", "message":"Reader not found!"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if reader.UserID != user.ID {
+		http.Error(rw, `{"status":"error", "message":"Not allowed!"}`, http.StatusBadRequest)
+		return
+	}
+
+	err = s.store.GroupAddReader(group.ID, reader.ID)
+	if err != nil {
+		rw.Write([]byte(`{"status":"error", "message":"Cannot join group!"}`))
+		return
+	}
+
+	rw.Write([]byte("{\"status\":\"ok\"}"))
+}
+
 // About - about this site
 func (s *Service) About(rw http.ResponseWriter, r *http.Request) {
 	if err := s.t.ExecuteTemplate(rw, "about.gohtml", nil); err != nil {

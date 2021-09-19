@@ -150,6 +150,27 @@ let doSearchGroups = function(params) {
                 add_link.addEventListener("click", (e) => {
                     e.preventDefault();
                     console.log(" clicked.." + item["id"]);
+                    let reader = document.querySelector("select[name=groupreader]").value;
+                    if (!reader) {
+                        alert("Must pick a reader!");
+                        return;
+                    }
+                    e.target.style.display = "none";
+                    let args = {
+                        group: item["id"],
+                        reader: parseInt(reader, 10),
+                    };
+                    //return;
+                    postData("/joingroup", args)
+                        .then(data => {
+                            console.log(data);
+                            if (data && data.status === "ok") {
+                                document.location.href = "/settings";
+                            }
+                            else if (data.message && data.message !== "") {
+                                alert(data.message);
+                            }
+                        });
                 });
                 ul.appendChild(li);
             });

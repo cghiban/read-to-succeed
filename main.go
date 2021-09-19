@@ -92,6 +92,7 @@ func main() {
 	sm.Handle("/addgroup", web.WrapMiddleware(r2sservice.AddGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
 	sm.Handle("/updategroup/{id:[0-9]+}", web.WrapMiddleware(r2sservice.UpdateGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST").HeadersRegexp("Content-Type", "application/json")
 	sm.Handle("/findgroups", web.WrapMiddleware(r2sservice.FindAvailableGroups, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
+	sm.Handle("/joingroup", web.WrapMiddleware(r2sservice.JoinGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
 
 	//sm.HandleFunc("/joingroup", r2sservice.JoinGroup)
 	sm.HandleFunc("/dailystats", r2sservice.GetDailyStats)

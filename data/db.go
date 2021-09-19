@@ -30,6 +30,7 @@ func encryptPassword(rawPass string) string {
 // CheckPasswd - validates password for login
 func (u AuthUser) CheckPasswd(rawPass string) bool {
 
+	// TODO probably not the best way to compare
 	return u.Pass == encryptPassword(rawPass)
 }
 
@@ -404,6 +405,24 @@ func (ds *DataStore) GetUserReaders(userID int) ([]Reader, error) {
 	}
 
 	return readers, nil
+}
+
+// GetUserReaders - retrieves all readers attached to this user
+func (ds *DataStore) GetReaderByID(readerID int) (Reader, error) {
+
+	query := `SELECT reader_id, user_id, name FROM readers WHERE reader_id = ?`
+	ds.L.Printf("Query: %s [%d]", query, readerID)
+
+	var err error
+	row := ds.DB.QueryRow(query, readerID)
+
+	if err != nil {
+		return Reader{}, err
+	}
+	var reader Reader
+	err = row.Scan(&reader.ID, &reader.UserID, &reader.Name)
+
+	return reader, err
 }
 
 // AddReader - add new reader into the db
