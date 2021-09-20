@@ -285,14 +285,14 @@ func (s *Service) Settings(rw http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Readers      []data.Reader
 		UserGroups   []data.Group
-		GroupReaders map[string][]data.Reader
+		GroupReaders map[string][]data.GReader
 	}{
 		Readers:      readers,
 		UserGroups:   userGroups,
 		GroupReaders: groupReaders,
 	}
 
-	log.Printf("data:%v+\n", data)
+	//log.Printf("data:%v+\n", data)
 
 	rw.Header().Set("Cache-Control", "no-cache")
 	if err := s.t.ExecuteTemplate(rw, "settings.gohtml", data); err != nil {
@@ -501,6 +501,17 @@ func (s *Service) JoinGroup(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	rw.Write([]byte("{\"status\":\"ok\"}"))
+}
+
+// LeaveGroup -Leave a group
+func (s *Service) LeaveGroup(rw http.ResponseWriter, r *http.Request) {
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Cache-Control", "no-cache")
+
+	//user := r.Context().Value("user").(*data.AuthUser)
+
+	rw.Write([]byte(`{"status":"error", "message":"not implemented"}`))
 }
 
 // About - about this site

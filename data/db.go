@@ -532,9 +532,13 @@ func (ds *DataStore) GroupAddReader(groupID, readerID int) error {
 	return nil
 }
 
-// GetGroupsAndReaders - retrieves all user's readers groups
-func (ds *DataStore) GetGroupsAndReaders(userID int) (map[string][]Reader, error) {
-	groups := map[string][]Reader{}
+type GReader struct {
+	Reader
+	GroupID int
+}
+
+// GetGroupsAndReaders - retrieves all user's readers' groups
+func (ds *DataStore) GetGroupsAndReaders(userID int) (map[string][]GReader, error) {
 
 	query := `SELECT g.id, g.name, group_concat(r.reader_id||'.'||r.name)
 	FROM groups g
@@ -547,23 +551,29 @@ func (ds *DataStore) GetGroupsAndReaders(userID int) (map[string][]Reader, error
 	var err error
 	rows, err = ds.DB.Query(query, userID)
 
+	groups := map[string][]GReader{}
+
 	if err != nil {
 		return groups, err
 	}
 	defer rows.Close()
 
-	var gID, gName, readerData string
+	var gID int
+	var gName, readerData string
 
 	for rows.Next() {
 		rows.Scan(&gID, &gName, &readerData)
 		//readers = append(readers, reader)
 
 		readersList := strings.Split(readerData, ",")
-		groups[gName] = []Reader{}
+		groups[gName] = []GReader{}
 		for _, r := range readersList {
 			readerInfo := strings.Split(r, ".")
 			readerID, _ := strconv.Atoi(readerInfo[0])
-			reader := Reader{ID: readerID, UserID: userID, Name: readerInfo[1]}
+			reader := GReader{
+				Reader{ID: readerID, UserID: userID, Name: readerInfo[1]},
+				gID,
+			}
 			groups[gName] = append(groups[gName], reader)
 		}
 		fmt.Printf("###\t%s: %+v\n", gName, groups[gName])

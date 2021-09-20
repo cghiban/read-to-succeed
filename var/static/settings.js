@@ -37,7 +37,31 @@ document.querySelector("#joinagroup").addEventListener('click', (ev) => {
         o.innerText = cells[1].innerText;
         groupreader_select.appendChild(o);
     }
-})
+});
+
+document.querySelectorAll("#tgroupreaders a").forEach((a) => {
+
+    a.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        //let a = ev.target;
+        console.log(a.getAttribute("gid"), " -- ", a.getAttribute("rid"));
+        let params = {
+            group_id: a.getAttribute("gid"),
+            reader_id: a.getAttribute("rid")
+        };
+        postData("/leavegroup", params)
+            .then(data => {
+                    console.log(data); // JSON data parsed by `data.json()` call
+                    if (data && data.status === "ok") {
+                        document.location.href = "/settings";
+                    }
+                    else if (data.message && data.message !== "") {
+                        alert(data.message);
+                    }
+                }
+            );
+    });
+});
 
 async function postData(url = '', data = {}) {
     // Default options are marked with *

@@ -74,7 +74,7 @@
       <th>Readers</th>
     </tr>
     </thead>
-    <tbody>
+    <tbody id="tgroupreaders">
     <tr>
       <td colspan="2"><a href="#" id="joinagroup">Join a new group</a></td>
     </tr>
@@ -83,7 +83,7 @@
       <td>{{$key}}</td>
       <td><ul>
       {{range $value }}
-        <li>{{.Name}}</li>
+        <li>{{.Name}} <a href="#" gid="{{.GroupID}}" rid="{{.ID}}">x</a></li>
       {{end}}
       </ul></td>
   </tr>
