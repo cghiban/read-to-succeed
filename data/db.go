@@ -277,6 +277,87 @@ func (ds *DataStore) ListUserReadings(userID int, args ...string) ([]Reading, er
 	return readings, nil
 }
 
+type GroupReading struct {
+	GroupID    int    `json:"group_id,omitempty"`
+	GroupName  string `json:"group_name,omitempty"`
+	ReaderID   int
+	ReaderName string    `json:"reader"`
+	BookAuthor string    `json:"author"`
+	BookTitle  string    `json:"title"`
+	Day        string    `json:"day"`
+	Duration   int       `json:"duration"`
+	CreatedOn  time.Time `json:"-"`
+}
+
+// ListUserGroupsReadings - retrieves all records of the given users' group(s)
+// may pass group ID as a filter
+func (ds *DataStore) ListUserGroupsReadings(userID int, args ...int) ([]GroupReading, error) {
+	readings := []GroupReading{}
+	queryFmt := `
+	SELECT g.id, g.name, r.reader, r.reader_id, r.book_author, r.book_title, r.day, r.duration, r.created
+	FROM groups g
+	JOIN group_readers gr ON g.id = gr.group_id
+	JOIN readings r ON gr.reader_id = r.reader_id
+	WHERE g.id IN (
+		-- my readers' groups
+		SELECT group_id
+		FROM group_readers
+		WHERE reader_id IN (
+			SELECT reader_id FROM readers
+			WHERE user_id = ?
+		) %s
+	)
+	ORDER BY r.created DESC
+    `
+	var query string
+	var rows *sql.Rows
+	var err error
+	if len(args) == 1 && args[0] != 0 {
+		where := " AND group_id = ? "
+		query = fmt.Sprintf(queryFmt, where)
+		rows, err = ds.DB.Query(query, userID, args[0])
+	} else {
+		query = fmt.Sprintf(queryFmt, "")
+		rows, err = ds.DB.Query(query, userID)
+	}
+
+	fmt.Println(query, args[0])
+
+	if err != nil {
+		return readings, err
+	}
+	defer rows.Close()
+	var r GroupReading
+
+	//var day, created, duration string
+	var created string
+	for rows.Next() {
+		// g.id, g.name, r.reader, r.reader_id, r.book_author, r.book_title, r.day, r.duration, r.created
+		rows.Scan(
+			&r.GroupID,
+			&r.GroupName,
+			&r.ReaderName,
+			&r.ReaderID,
+			&r.BookAuthor,
+			&r.BookTitle,
+			&r.Day,
+			&r.Duration,
+			&created)
+
+		//ds.l.Println(day, duration, created)
+		t, _ := time.Parse("2006-01-02T15:04:05Z", created)
+		r.CreatedOn = t
+		/*t, _ = time.Parse("2006-01-02T00:00:00Z", day)
+		r.Day = t
+		r.Duration, _ = time.ParseDuration(duration)*/
+
+		//ds.l.Println(r)
+		readings = append(readings, r)
+	}
+
+	return readings, nil
+}
+
 type ReaderStat struct {
 	ReaderName string
 	Name       string
@@ -372,10 +453,9 @@ func (ds *DataStore) GetStatsDaily(userID int) (DailyReadingStats, error) {
 		} else {
 			dailyStats[entry.Label] = append(dailyStats[entry.Label], entry)
 		}
-		fmt.Printf("###\t%+v\n", entry)
+		//fmt.Printf("###\t%+v\n", entry)
 	}
-
-	fmt.Printf("%+v", dailyStats)
+	//fmt.Printf("%+v", dailyStats)
 
 	return dailyStats, nil
 }

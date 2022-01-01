@@ -10,6 +10,7 @@ Tiny webapp for recording ones read book, articles, etc
 - [x] add readers management and stop using READERS env var
 - [ ] add user settings (privacy / readers and groups)
 - [ ] more stats (daily and monthly)
+- [x] show groups readings
 - [x] add groups
 - [x] join/leave a group
 - [ ] pagination
@@ -66,7 +67,7 @@ CREATE UNIQUE INDEX readers_unq1 ON readers(user_id, name);
 
 INSERT INTO readers (user_id, name, grade_lvl, created) VALUES
 (1, 'Cornel', 'grownup', datetime('now','localtime')),
-(1, 'Daniel', '1st', datetime('now','localtime')),
+(1, 'Daniel', '2nd', datetime('now','localtime')),
 (1, 'Elena', 'grownup', datetime('now','localtime'));
 
 CREATE TABLE readings (

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inconsolata">
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <link rel="stylesheet" href="/static/styles.css">
+        <title>Groups Reading Log - Read to Succeed</title>
+    </head>
+  <body>
+    <div class="welcome-center">
+      <a href="/" title="my readings"><span class="material-icons">list</span></a>
+      <a href="/dailystats" title="Daily stats"><span class="material-icons">insights</span></a>
+      <a href="/settings" title="settings"><span class="material-icons">manage_accounts</span></a>
+      <a href="/logout"><span class="material-icons">exit_to_app</span></a>
+    </div>
+
+<div style="overflow-x:auto;">
+  <table>
+    <thead>
+    <tr>
+      <th>Group</th>
+      <th>Reader</th>
+      <th>Author</th>
+      <th>Title</th>
+      <th>Day</th>
+      <th>Duration</th>
+      <th>Added on</th>
+    </tr>
+    </thead>
+    <tbody>
+  {{ range .Readings}}
+  <tr>
+      <td><a href="/groupreadings?group={{.GroupID}}">{{.GroupName}}</a></td>
+      <td>{{.ReaderName}}</td>
+      <td>{{.BookAuthor}}</td>
+      <td>{{.BookTitle}}</td>
+      <td>{{dayToDate .Day}}</td>
+      <td>{{.Duration}}m</td>
+      <td>{{dateISOish .CreatedOn}}</td>
+  </tr>
+  {{ end }}
+  <tbody>
+  </table>
+</div>
+
+  <script type="text/javascript" src="/static/scripts.js"></script>
+  </body>
+</html>

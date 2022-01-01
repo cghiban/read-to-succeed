@@ -87,6 +87,7 @@ func main() {
 	postRouter := sm.Methods("POST").Subrouter()
 	postRouter.HandleFunc("/add", r2sservice.AddReading)
 
+	sm.Handle("/groupreadings", web.WrapMiddleware(r2sservice.GetGroupReadings, authMw.UserViaSession, authMw.RequireUser))
 	sm.Handle("/settings", web.WrapMiddleware(r2sservice.Settings, authMw.UserViaSession, authMw.RequireUser))
 	sm.Handle("/addreader", web.WrapMiddleware(r2sservice.AddReader, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
 	sm.Handle("/addgroup", web.WrapMiddleware(r2sservice.AddGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
@@ -95,7 +96,6 @@ func main() {
 	sm.Handle("/joingroup", web.WrapMiddleware(r2sservice.JoinGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
 	sm.Handle("/leavegroup", web.WrapMiddleware(r2sservice.LeaveGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
 
-	//sm.HandleFunc("/joingroup", r2sservice.JoinGroup)
 	sm.HandleFunc("/dailystats", r2sservice.GetDailyStats)
 	sm.HandleFunc("/about", r2sservice.About)
 

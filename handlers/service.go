@@ -129,6 +129,43 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetGroupReadings - list user's/users' read books
+func (s *Service) GetGroupReadings(rw http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value("user").(*data.AuthUser)
+	log.Println("user:", user)
+
+	group := r.URL.Query().Get("group")
+	if group == "" {
+		group = "0"
+	}
+	group_id, err := strconv.Atoi(group)
+	if err != nil {
+		log.Println(err)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	readings, err := s.store.ListUserGroupsReadings(user.ID, group_id)
+	if err != nil {
+		log.Println(err)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Readings []data.GroupReading
+	}{
+		Readings: readings,
+	}
+
+	//s.l.Printf("stats: %#v\n", stats)
+
+	if err := s.t.ExecuteTemplate(rw, "group_readings.gohtml", data); err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	}
+
+}
+
 // AddReading - add new entry
 func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -245,9 +282,9 @@ func (s *Service) GetDailyStats(rw http.ResponseWriter, r *http.Request) {
 		DailyStats:    dailyStats,
 		Days:          days,
 	}
-	for _, day := range days {
-		fmt.Printf("** %+s\t%+v\n", day, dailyStats[day])
-	}
+	// for _, day := range days {
+	// 	fmt.Printf("** %+s\t%+v\n", day, dailyStats[day])
+	// }
 
 	//s.l.Printf("stats: %#v\n", stats)
 	//s.l.Printf("dailyStats: %#v\n", dailyStats)
