@@ -1,0 +1,6 @@
+read2succeed
+db.*
+db-*
+var/db*
+*.json
+*.sw?

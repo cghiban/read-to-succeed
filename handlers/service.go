@@ -509,9 +509,51 @@ func (s *Service) LeaveGroup(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.Header().Set("Cache-Control", "no-cache")
 
-	//user := r.Context().Value("user").(*data.AuthUser)
+	user := r.Context().Value("user").(*data.AuthUser)
+	log.Println("user:", user)
 
-	rw.Write([]byte(`{"status":"error", "message":"not implemented"}`))
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	params := struct {
+		GroupID  int `json:"group_id"`
+		ReaderID int `json:"reader_id"`
+	}{}
+	if err := decoder.Decode(&params); err != nil {
+		log.Println(err)
+		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Printf("params: %+v\n", params)
+
+	group, err := s.store.GetGroupByID(params.GroupID)
+	if err != nil {
+		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
+		return
+	}
+	fmt.Printf("group: %+v\n", group)
+
+	reader, err := s.store.GetReaderByID(params.ReaderID)
+	if err != nil {
+		s.l.Println(err.Error())
+		http.Error(rw, `{"status":"error", "message":"Reader not found!"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if reader.UserID != user.ID {
+		http.Error(rw, `{"status":"error", "message":"Not allowed!"}`, http.StatusBadRequest)
+		return
+	}
+
+	// leave the group
+	err = s.store.GroupRemoveReader(params.GroupID, params.ReaderID)
+	if err != nil {
+		log.Println("Unable to remove the reader from the group: ", err)
+		http.Error(rw, `{"status":"error", "message":"Unable to remove the reader from the group!"}`,
+			http.StatusInternalServerError)
+		return
+	}
+	rw.Write([]byte(`{"status":"ok"}`))
 }
 
 // About - about this site

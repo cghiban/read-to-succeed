@@ -39,21 +39,31 @@ document.querySelector("#joinagroup").addEventListener('click', (ev) => {
     }
 });
 
-document.querySelectorAll("#tgroupreaders a").forEach((a) => {
+document.querySelectorAll("#tgroupreaders a").forEach((a, i) => {
+    if (i === 0)
+        return;
 
     a.addEventListener('click', (ev) => {
         ev.preventDefault();
+        if (!confirm("Are you sure?"))
+            return;
+
         //let a = ev.target;
-        console.log(a.getAttribute("gid"), " -- ", a.getAttribute("rid"));
+        //console.log(a.getAttribute("gid"), " -- ", a.getAttribute("rid"));
         let params = {
-            group_id: a.getAttribute("gid"),
-            reader_id: a.getAttribute("rid")
+            group_id: parseInt(a.getAttribute("gid"), 10),
+            reader_id: parseInt(a.getAttribute("rid"), 10)
         };
         postData("/leavegroup", params)
             .then(data => {
                     console.log(data); // JSON data parsed by `data.json()` call
                     if (data && data.status === "ok") {
-                        document.location.href = "/settings";
+                        try {
+                            //a.remove();
+                            a.parentNode.remove();
+                        } catch {
+                            document.location.href = "/settings";
+                        }
                     }
                     else if (data.message && data.message !== "") {
                         alert(data.message);
@@ -123,7 +133,6 @@ document.querySelectorAll('form button').forEach( btn => {
 });
 
 document.querySelectorAll('#usergroups input[type=checkbox]').forEach( cb => {
-    console.log(cb, cb.checked);
     cb.addEventListener('change', ev => {
         console.log(cb, ev.target, cb.checked, cb.value);
         let gid = cb.value;
@@ -219,7 +228,7 @@ window.onclick = function(event) {
 }
 
 document.body.addEventListener('keyup', function(e) {
-    if (e.key == "Escape") {
+    if (e.key == "Escape" && modal) {
         console.log("modal: ", modal);
         modal.style.display = "none";
     }

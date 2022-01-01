@@ -532,6 +532,23 @@ func (ds *DataStore) GroupAddReader(groupID, readerID int) error {
 	return nil
 }
 
+// GroupRemoveReader - remove reader from group
+func (ds *DataStore) GroupRemoveReader(groupID, readerID int) error {
+	query := `DELETE FROM group_readers WHERE group_id = ? AND reader_id = ?`
+	stmt, err := ds.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(groupID, readerID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type GReader struct {
 	Reader
 	GroupID int
@@ -576,7 +593,7 @@ func (ds *DataStore) GetGroupsAndReaders(userID int) (map[string][]GReader, erro
 			}
 			groups[gName] = append(groups[gName], reader)
 		}
-		fmt.Printf("###\t%s: %+v\n", gName, groups[gName])
+		//fmt.Printf("###\t%s: %+v\n", gName, groups[gName])
 	}
 
 	return groups, nil
