@@ -8,14 +8,16 @@ document.querySelector("#newreader").addEventListener('click', (ev) => {
     ev.preventDefault();
 });
 
-document.querySelector("#newgroup").addEventListener('click', (ev) => {
-    //reader.value = readers.value;
-    modal = document.querySelector("#groupModal");
-    modal.style.display = "block";
-    //document.querySelector('input[name=name]').focus();
-    document.querySelector('#addgroup input[name=name]').focus();
-    ev.preventDefault();
-});
+if (document.querySelector("#newgroup")) {
+    document.querySelector("#newgroup").addEventListener('click', (ev) => {
+        //reader.value = readers.value;
+        modal = document.querySelector("#groupModal");
+        modal.style.display = "block";
+        //document.querySelector('input[name=name]').focus();
+        document.querySelector('#addgroup input[name=name]').focus();
+        ev.preventDefault();
+    });
+}
 
 document.querySelector("#joinagroup").addEventListener('click', (ev) => {
     //reader.value = readers.value;

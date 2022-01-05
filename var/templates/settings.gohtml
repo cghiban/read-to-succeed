@@ -17,7 +17,9 @@
       <a href="/groupreadings" title="Group Readings"><span class="material-icons">format_list_numbered_rtl</span></a>
       <a href="/dailystats" title="Daily stats"><span class="material-icons">insights</span></a>
       <a href="#" id="newreader" title="Add reader"><span class="material-icons">person_add_alt</span></a>
+      {{ if .CurrentUser.IsAdmin }}
       <a href="#" id="newgroup" title="Add group"><span class="material-icons">group_add</span></a>
+      {{ end }}
       <a href="/logout"><span class="material-icons">exit_to_app</span></a>
     </div>
 
@@ -39,6 +41,8 @@
   <tbody>
   </table>
 </div>
+
+{{ if .CurrentUser.IsAdmin }}
 <div style="float: left;">&nbsp;</div>
     <div style="float: left;">
       <table id="usergroups">
@@ -67,6 +71,7 @@
         <tbody>
       </table>
     </div>
+{{ end }}
 <div style="float: left;">&nbsp;</div>
 <div style="float: left;">
   <table>

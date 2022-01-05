@@ -323,10 +323,12 @@ func (s *Service) Settings(rw http.ResponseWriter, r *http.Request) {
 		Readers      []data.Reader
 		UserGroups   []data.Group
 		GroupReaders map[string][]data.GReader
+		CurrentUser  data.AuthUser
 	}{
 		Readers:      readers,
 		UserGroups:   userGroups,
 		GroupReaders: groupReaders,
+		CurrentUser:  *user,
 	}
 
 	//log.Printf("data:%v+\n", data)

@@ -20,6 +20,7 @@ type AuthUser struct {
 	Name      string
 	Email     string
 	Pass      string
+	IsAdmin   bool
 	CreatedOn time.Time
 }
 
@@ -101,8 +102,8 @@ func (ds *DataStore) GetSQLiteVersion() (string, error) {
 // CreateUser - add new user into db
 func (ds *DataStore) CreateUser(u *AuthUser) error {
 	query := `
-	INSERT INTO auth_user (email, name, passw, created)
-	VALUES (?, ?, ?, datetime('now','localtime'))
+	INSERT INTO auth_user (email, name, passw, is_admin, created)
+	VALUES (?, ?, ?, false, datetime('now','localtime'))
 	`
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
@@ -111,14 +112,11 @@ func (ds *DataStore) CreateUser(u *AuthUser) error {
 	defer stmt.Close()
 
 	u.Pass = encryptPassword(u.Pass)
-	//encPass := encryptPassword(u.Pass)
 
 	res, err := stmt.Exec(u.Email, u.Name, u.Pass)
 	if err != nil {
 		return err
 	}
-	//rowNum, _ := res.RowsAffected()
-	//ds.L.Println(" -- added videos to DB: ", rowNum)
 
 	id, err := res.LastInsertId()
 	if err != nil {
@@ -133,7 +131,7 @@ func (ds *DataStore) CreateUser(u *AuthUser) error {
 func (ds *DataStore) GetUser(email string) (*AuthUser, error) {
 
 	query := `
-        SELECT user_id, name, email, passw, created
+        SELECT user_id, name, email, passw, is_admin, created
 		FROM auth_user
 		WHERE email = ?`
 	row := ds.DB.QueryRow(query, email)
@@ -147,7 +145,7 @@ func (ds *DataStore) GetUser(email string) (*AuthUser, error) {
 	//var day, created, duration string
 	var userID, created string
 	var u AuthUser
-	err := row.Scan(&userID, &u.Name, &u.Email, &u.Pass, &created)
+	err := row.Scan(&userID, &u.Name, &u.Email, &u.Pass, &u.IsAdmin, &created)
 	if err != nil {
 		ds.L.Println("nope...")
 		ds.L.Println("****", err)
@@ -165,7 +163,7 @@ func (ds *DataStore) GetUser(email string) (*AuthUser, error) {
 func (ds *DataStore) GetUserByID(user_id int) (*AuthUser, error) {
 
 	query := `
-        SELECT user_id, name, email, passw, created
+        SELECT user_id, name, email, passw, is_admin, created
 		FROM auth_user
 		WHERE user_id = ?`
 	row := ds.DB.QueryRow(query, user_id)
@@ -177,7 +175,7 @@ func (ds *DataStore) GetUserByID(user_id int) (*AuthUser, error) {
 
 	var userID, created string
 	var u AuthUser
-	err := row.Scan(&userID, &u.Name, &u.Email, &u.Pass, &created)
+	err := row.Scan(&userID, &u.Name, &u.Email, &u.Pass, &u.IsAdmin, &created)
 	if err != nil {
 		ds.L.Println("nope...")
 		ds.L.Println("****", err)
