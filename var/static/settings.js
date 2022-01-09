@@ -19,27 +19,27 @@ if (document.querySelector("#newgroup")) {
     });
 }
 
-document.querySelector("#joinagroup").addEventListener('click', (ev) => {
-    //reader.value = readers.value;
-    modal = document.querySelector("#joinGroupModal");
-    modal.style.display = "block";
-    //document.querySelector('input[name=name]').focus();
-    document.querySelector('#findgroups input[name=name]').focus();
-    ev.preventDefault();
+if (document.querySelector("#joinagroup")) {
+    document.querySelector("#joinagroup").addEventListener('click', (ev) => {
+        modal = document.querySelector("#joinGroupModal");
+        modal.style.display = "block";
+        document.querySelector('#findgroups input[name=name]').focus();
+        ev.preventDefault();
 
-    // populate select w/ readers
-    let groupreader_select = document.querySelector("select[name=groupreader]");
-    groupreader_select.childNodes.forEach(e => e.remove());
-    let tRows = document.querySelector("#readerstable").rows;
-    for (let i = 1; i < tRows.length; i++) {
-        const row = tRows[i],
-            cells = row.cells;
-        const o = document.createElement("option");
-        o.innerText = cells[0].innerText;
-        o.value = cells[0].getAttribute("data__reader_id");
-        groupreader_select.appendChild(o);
-    }
-});
+        // populate select w/ readers
+        let groupreader_select = document.querySelector("select[name=groupreader]");
+        groupreader_select.childNodes.forEach(e => e.remove());
+        let tRows = document.querySelector("#readerstable").rows;
+        for (let i = 1; i < tRows.length; i++) {
+            const row = tRows[i],
+                cells = row.cells;
+            const o = document.createElement("option");
+            o.innerText = cells[0].innerText;
+            o.value = cells[0].getAttribute("data__reader_id");
+            groupreader_select.appendChild(o);
+        }
+    });
+}
 
 document.querySelectorAll("#tgroupreaders a").forEach((a, i) => {
     if (i === 0)

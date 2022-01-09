@@ -323,11 +323,13 @@ func (s *Service) Settings(rw http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		Readers      []data.Reader
+		HasNoReaders bool
 		UserGroups   []data.Group
 		GroupReaders map[string][]data.GReader
 		CurrentUser  data.AuthUser
 	}{
 		Readers:      readers,
+		HasNoReaders: len(readers) == 0,
 		UserGroups:   userGroups,
 		GroupReaders: groupReaders,
 		CurrentUser:  *user,

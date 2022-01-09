@@ -23,6 +23,12 @@
   </div>
 
 <div style="float: left; margin: 0 10px;">
+{{if .HasNoReaders}}
+    <div class="note">
+      Please click on "add reader" to add readers. Then go to the <a href="/">main page</a> to record your/their readings.
+    </div>
+{{else}}
+
   <table id="readerstable">
     <thead>
     <tr>
@@ -64,6 +70,7 @@
   <tbody>
   </table>
 </div>
+{{end}}
 
 {{ if .CurrentUser.IsAdmin }}
     <div style="float: left; margin: 0 10px;">
