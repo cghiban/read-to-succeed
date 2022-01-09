@@ -87,14 +87,14 @@ only screen and (max-width: 760px)/*,
   
   /* Label the data */
   /*td:nth-of-type(1):before { content: "#";}*/
-  table#readinglist td:nth-of-type(1) { display: none }
-	table#readinglist td:nth-of-type(2):before { content: "Reader"; }
-	table#readinglist td:nth-of-type(3):before { content: "Author"; }
-	table#readinglist td:nth-of-type(4):before { content: "Title"; }
-	table#readinglist td:nth-of-type(5):before { content: "Day"; }
-	table#readinglist td:nth-of-type(6):before { content: "Duration"; }
+  /*table#readinglist td:nth-of-type(1) { display: none }*/
+	table#readinglist td:nth-of-type(1):before { content: "Reader"; }
+	table#readinglist td:nth-of-type(2):before { content: "Author"; }
+	table#readinglist td:nth-of-type(3):before { content: "Title"; }
+	table#readinglist td:nth-of-type(4):before { content: "Day"; }
+	table#readinglist td:nth-of-type(5):before { content: "Duration"; }
   /* table#readinglisttd:nth-of-type(7):before { content: "Added on"; }*/
-  table#readinglisttd:nth-of-type(7) { display: none }
+  table#readinglist td:nth-of-type(6) { display: none }
 }
 
 /* The Modal (background) */
@@ -149,8 +149,23 @@ only screen and (max-width: 760px)/*,
 #stats {
   /*display:  none;*/
 }
-
 /* ------------------- */
+
+div#content {
+  margin: 20px;
+}
+
+.sub-nav {
+  margin-bottom: 10px;
+  margin-left: 20px;
+}
+
+div#logo {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: large;
+  font-weight: bold;
+  color: #333;
+}
 
 .top-nav {
   display: flex;
@@ -163,6 +178,11 @@ only screen and (max-width: 760px)/*,
   color: #FFF;
   height: 50px;
   padding: 1em;
+}
+
+.top-nav a {
+  text-decoration: none;
+  color: #FFF;
 }
 
 .menu {

@@ -12,6 +12,7 @@
     {{ block "menu_outside" .}}{{end}}
 
     <h1>Login</h1>
+    <div id="content">
 
     {{if .Message}}
     <div class="message">{{.Message}}</div>
@@ -33,5 +34,6 @@
         </div>
     </form>
     <div>Don't have an account? <a href="/register">Register</a> to log your readings.</div>
+    </div>
   </body>
 </html>

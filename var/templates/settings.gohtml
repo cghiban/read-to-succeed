@@ -15,14 +15,14 @@
 
     <h1>Settings</h1>
 
-  <div>
+  <div class="sub-nav">
     <a href="#" id="newreader" title="Add reader">add reader</a>
     {{ if .CurrentUser.IsAdmin }}
     <a href="#" id="newgroup" title="Add group">add group</a>
     {{ end }}
   </div>
 
-<div style="float: left;">
+<div style="float: left; margin: 0 10px;">
   <table id="readerslist_">
     <thead>
     <tr>
@@ -41,7 +41,7 @@
   </table>
 </div>
 
-<div style="float: left;">
+<div style="float: left; margin: 0 10px;">
   <table>
     <thead>
     <tr>
@@ -68,8 +68,7 @@
 </div>
 
 {{ if .CurrentUser.IsAdmin }}
-<div style="float: left;">&nbsp;</div>
-    <div style="float: left;">
+    <div style="float: left; margin: 0 10px;">
       <table id="usergroups">
         <thead>
         <tr>

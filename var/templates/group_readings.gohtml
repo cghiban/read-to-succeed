@@ -13,7 +13,7 @@
     {{ block "menu_burger" .}}{{end}}
 
     <h1>Groups Reading Log</h1>
-<div style="overflow-x:auto;">
+<div style="overflow-x:auto;" id="content">
   <table>
     <thead>
     <tr>
@@ -23,7 +23,6 @@
       <th>Title</th>
       <th>Day</th>
       <th>Duration</th>
-      <th>Added on</th>
     </tr>
     </thead>
     <tbody>
@@ -35,7 +34,6 @@
       <td>{{.BookTitle}}</td>
       <td>{{dayToDate .Day}}</td>
       <td>{{.Duration}}m</td>
-      <td>{{dateISOish .CreatedOn}}</td>
   </tr>
   {{ end }}
   <tbody>

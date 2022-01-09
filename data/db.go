@@ -196,7 +196,7 @@ func (ds *DataStore) AddReading(r *Reading) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("found reader: %+v", reader)
+	//fmt.Printf("found reader: %+v", reader)
 
 	query := `
         INSERT INTO readings (user_id, reader, reader_id, book_author, book_title, day, duration, created)
@@ -209,13 +209,12 @@ func (ds *DataStore) AddReading(r *Reading) error {
 	}
 	defer stmt.Close()
 
-	// XXX reader_id is not 1.. must fix this!!!
 	res, err := stmt.Exec(r.UserID, r.ReaderName, reader.ID, r.BookAuthor, r.BookTitle, r.Day, r.Duration)
 	if err != nil {
 		return err
 	}
-	rowNum, _ := res.RowsAffected()
-	ds.L.Println(" -- added new reading to DB: ", rowNum)
+	//rowNum, _ := res.RowsAffected()
+	//ds.L.Println(" -- added new reading to DB: ", rowNum)
 
 	id, err := res.LastInsertId()
 	if err != nil {

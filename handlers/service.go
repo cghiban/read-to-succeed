@@ -38,7 +38,7 @@ func NewService(l *log.Logger, store *data.DataStore, sessionKey *string, resour
 			if err != nil {
 				return ""
 			}
-			return t.Format("Jan 2, 2006")
+			return t.Format("Jan 2")
 		},
 		"dateISOish": func(t time.Time) string { return t.Format("2006-01-02 3:04pm") },
 	}

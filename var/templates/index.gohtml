@@ -12,16 +12,16 @@
 
   <h1>Reading Log</h1>
   
-  <div>
+  <div class="sub-nav">
       <select id="readers">
   {{- $cr := .CurrentReader -}}
       <option value="">-= pick a reader =-</option>
   {{ range .Readers -}}
-      <option value="{{.Name}}" {{if eq .Name $cr}}selected{{end}}>{{.ID}}.{{.Name}}</option>
+      <option value="{{.Name}}" {{if eq .Name $cr}}selected{{end}}>{{.Name}}</option>
   {{ end }}
       </select>
       <a href="#" id="addentry" title="add reading">add entry <button> + </button></a>
-      <a href="#" id="togglestats" title="stats">show_chart</a>
+      <a href="#" id="togglestats" title="stats">show totals</a>
   </div>
 
     <div id="stats" hidden>
@@ -34,11 +34,10 @@
       <div><a href="/dailystats">View last 30 days</a></div>
     </div>
 
-<div style="overflow-x:auto;">
+<div style="overflow-x:auto;" id="content">
   <table id="readinglist">
     <thead>
     <tr>
-      <th>#</th>
       <th>Reader</th>
       <th>Author</th>
       <th>Title</th>
@@ -50,7 +49,6 @@
     <tbody>
   {{ range .Readings}}
   <tr>
-      <td>{{.ID}}</td>
       <td>{{.ReaderName}}</td>
       <td>{{.BookAuthor}}</td>
       <td>{{.BookTitle}}

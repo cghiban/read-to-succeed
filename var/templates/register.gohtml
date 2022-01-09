@@ -17,6 +17,7 @@
     <div class="message">{{.Message}}</div>
     {{end}}
 
+    <div id="content">
     <form method="POST" action="/register">
 		{{ .csrfField }}
         <div>
@@ -36,6 +37,7 @@
             <button>submit</button>
         </div>
     </form>
+    </div>
 
     <div>Already have an account? <a href="/login">Login</a>.</div>
   </body>
