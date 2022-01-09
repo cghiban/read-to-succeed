@@ -13,12 +13,28 @@ if (stats) {
     stats.hidden = true;
 }
 
-if (document.querySelector("#addentry")) {
-    document.querySelector("#addentry").addEventListener('click', (ev) => {
-        reader.value = readers.value;
+let addButtons = document.querySelectorAll(".addentry, #addentry");
+addButtons.forEach(b => {
+    console.log(b);
+    b.addEventListener('click', (ev) => {
+        if (b.getAttribute("data__reader")) {
+            reader.value = b.getAttribute("data__reader");
+        } else {
+            reader.value = readers.value;
+        }
+        if (b.getAttribute("data__author")) {
+            author.value = b.getAttribute("data__author");
+        } else {
+            author.value = "";
+        }
+        if (b.getAttribute("data__title")) {
+            title.value = b.getAttribute("data__title");
+        } else {
+            title.value = "";
+        }
         modal.style.display = "block";
     });
-}
+});
 
 if (document.querySelector('#togglestats')) {
     document.querySelector('#togglestats').addEventListener('click', (ev) => {

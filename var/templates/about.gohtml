@@ -9,14 +9,11 @@
         <title>About - Read to Succeed</title>
     </head>
   <body>
-    <div class="welcome-center">
-        <a href="/">Home</a>
-        <a href="/login">Login</a>
-        <h1>About this site</h1>
-    </div>
+    {{ block "menu_outside" .}}{{end}}
+    <h1>About this site</h1>
 
     <div>
-    This is a space where you can log your or your children's books and how much time was spent reading.
+      This is a space where you can log your or your children's books and how much time was spent reading.
     </div>
   </body>
 </html>

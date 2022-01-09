@@ -1,6 +1,19 @@
+@import url(https://fonts.googleapis.com/css?family=Inconsolata);
+h2 {
+  vertical-align: center;
+  text-align: center;
+}
+
+* {
+  font-family: "Inconsolata", Arial, Helvetica, sans-serifm;
+  box-sizing: border-box;
+}
+
 body {
-   min-height:100%;
-   font-family: 'Inconsolata', Arial, Helvetica, sans-serif;
+  min-height:100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Avenir Next", "Avenir", sans-serif;
 }
 table {
   border-collapse: collapse;
@@ -30,6 +43,11 @@ tr.gpublic td {
   font-weight: bold;
 }
 
+/* more padding for 'menu' links' */
+.welcome-center a span {
+  padding: 4px;
+}
+
 /* 
 Max width before this PARTICULAR table gets nasty
 This query will take effect for any screen smaller than 760px
@@ -39,24 +57,24 @@ and also iPads specifically.
 only screen and (max-width: 760px)/*,
 (min-device-width: 768px) and (max-device-width: 1024px)*/  {
 	/* Force table to not be like tables anymore */
-	table, thead, tbody, th, td, tr { 
+	table#readinglist, table#readinglist thead, ttable#readinglist body, table#readinglist th, table#readinglist td, table#readinglist tr { 
 		display: block; 
 	}
 	/* Hide table headers (but not display: none;, for accessibility) */
-	thead tr {
+	table#readinglist thead tr {
 		position: absolute;
 		top: -9999px;
 		left: -9999px;
 	}
 	tr { border: 1px solid #ccc; }
-	td {
+	table#readinglist td {
 		/* Behave  like a "row" */
 		border: none;
 		border-bottom: 1px solid #eee;
 		position: relative;
 		padding-left: 30%; 
 	}
-	td:before {
+	table#readinglist td:before {
 		/* Now like a table header */
 		position: absolute;
 		/* Top/left values mimic padding */
@@ -69,14 +87,14 @@ only screen and (max-width: 760px)/*,
   
   /* Label the data */
   /*td:nth-of-type(1):before { content: "#";}*/
-  td:nth-of-type(1) { display: none }
-	td:nth-of-type(2):before { content: "Reader"; }
-	td:nth-of-type(3):before { content: "Author"; }
-	td:nth-of-type(4):before { content: "Title"; }
-	td:nth-of-type(5):before { content: "Day"; }
-	td:nth-of-type(6):before { content: "Duration"; }
-  /*td:nth-of-type(7):before { content: "Added on"; }*/
-  td:nth-of-type(7) { display: none }
+  table#readinglist td:nth-of-type(1) { display: none }
+	table#readinglist td:nth-of-type(2):before { content: "Reader"; }
+	table#readinglist td:nth-of-type(3):before { content: "Author"; }
+	table#readinglist td:nth-of-type(4):before { content: "Title"; }
+	table#readinglist td:nth-of-type(5):before { content: "Day"; }
+	table#readinglist td:nth-of-type(6):before { content: "Duration"; }
+  /* table#readinglisttd:nth-of-type(7):before { content: "Added on"; }*/
+  table#readinglisttd:nth-of-type(7) { display: none }
 }
 
 /* The Modal (background) */
@@ -132,3 +150,129 @@ only screen and (max-width: 760px)/*,
   /*display:  none;*/
 }
 
+/* ------------------- */
+
+.top-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #00BAF0;
+  /* background: linear-gradient(to left, #f46b45, #eea849); */
+  /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+  color: #FFF;
+  height: 50px;
+  padding: 1em;
+}
+
+.menu {
+  display: flex;
+  flex-direction: row;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.menu > li {
+  margin: 0 1rem;
+}
+
+.menu-button-container {
+  display: none;
+  height: 100%;
+  width: 30px;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#menu-toggle {
+  display: none;
+}
+
+.menu-button,
+.menu-button::before,
+.menu-button::after {
+  display: block;
+  background-color: #fff;
+  position: absolute;
+  height: 4px;
+  width: 30px;
+  transition: transform 400ms cubic-bezier(0.23, 1, 0.32, 1);
+  border-radius: 2px;
+}
+
+.menu-button::before {
+  content: '';
+  margin-top: -8px;
+}
+
+.menu-button::after {
+  content: '';
+  margin-top: 8px;
+}
+
+#menu-toggle:checked + .menu-button-container .menu-button::before {
+  margin-top: 0px;
+  transform: rotate(405deg);
+}
+
+#menu-toggle:checked + .menu-button-container .menu-button {
+  background: rgba(255, 255, 255, 0);
+}
+
+#menu-toggle:checked + .menu-button-container .menu-button::after {
+  margin-top: 0px;
+  transform: rotate(-405deg);
+}
+
+@media (max-width: 760px) {
+  .menu-button-container {
+    display: flex;
+  }
+  .menu {
+    position: absolute;
+    top: 0;
+    margin-top: 50px;
+    left: 0;
+    flex-direction: column;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+  }
+  #menu-toggle ~ .menu li {
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    transition: height 400ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  #menu-toggle:checked ~ .menu li {
+    border: 1px solid #333;
+    height: 2.5em;
+    padding: 0.5em 1em;
+    transition: height 400ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  #menu-toggle:checked ~ .menu li a {
+    display: block;
+  }
+
+  .menu > li {
+    display: flex;
+    justify-content: right;
+    margin: 0;
+    padding: 0.5em 1em;
+    width: 100%;
+    /*color: white;*/
+    background-color: #222;
+  }
+  .menu > li > a {
+    display: none;
+    color: #fff;
+  }
+  .menu > li:not(:last-child) {
+    border-bottom: 1px solid #444;
+  }
+}
+/* ------------------- */

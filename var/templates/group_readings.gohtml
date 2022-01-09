@@ -10,13 +10,9 @@
         <title>Groups Reading Log - Read to Succeed</title>
     </head>
   <body>
-    <div class="welcome-center">
-      <a href="/" title="my readings"><span class="material-icons">list</span></a>
-      <a href="/dailystats" title="Daily stats"><span class="material-icons">insights</span></a>
-      <a href="/settings" title="settings"><span class="material-icons">manage_accounts</span></a>
-      <a href="/logout"><span class="material-icons">exit_to_app</span></a>
-    </div>
+    {{ block "menu_burger" .}}{{end}}
 
+    <h1>Groups Reading Log</h1>
 <div style="overflow-x:auto;">
   <table>
     <thead>

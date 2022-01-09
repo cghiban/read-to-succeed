@@ -109,6 +109,7 @@ func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 			session.Values["logged_in"] = true
 			session.Values["user_id"] = user.ID
 			session.Values["name"] = user.Name
+			session.Values["is_admin"] = user.IsAdmin
 
 			//readers, _ := s.store.GetUserReaders(user.ID)
 			//session.Values["readers"] = readers //.([]data.Reader)

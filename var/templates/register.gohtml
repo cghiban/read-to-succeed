@@ -9,11 +9,9 @@
         <title>Sign Up - Read to Succeed</title>
     </head>
   <body>
-    <div class="welcome-center">
-        <a href="/">Home</a>
-        <a href="/about">About</a>
-        <h1>Sign Up</h1>
-    </div>
+    {{ block "menu_outside" .}}{{end}}
+
+    <h2>Sign Up</h2>
 
     {{if .Message}}
     <div class="message">{{.Message}}</div>

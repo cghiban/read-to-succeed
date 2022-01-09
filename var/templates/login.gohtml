@@ -9,11 +9,9 @@
         <title>Login - Read to Succeed</title>
     </head>
   <body>
-    <div class="welcome-center">
-        <a href="/">Home</a>
-        <a href="/about">About</a>
-        <h1>Login</h1>
-    </div>
+    {{ block "menu_outside" .}}{{end}}
+
+    <h1>Login</h1>
 
     {{if .Message}}
     <div class="message">{{.Message}}</div>

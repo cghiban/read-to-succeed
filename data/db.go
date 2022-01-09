@@ -319,7 +319,7 @@ func (ds *DataStore) ListUserGroupsReadings(userID int, args ...int) ([]GroupRea
 		rows, err = ds.DB.Query(query, userID)
 	}
 
-	fmt.Println(query, args[0])
+	//fmt.Println(query, args[0])
 
 	if err != nil {
 		return readings, err

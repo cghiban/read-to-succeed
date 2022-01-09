@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html>
     <head>
         <meta charset="UTF-8">
@@ -12,19 +11,19 @@
         <title>Settings - Read to Succeed</title>
     </head>
   <body>
-    <div class="welcome-center">
-      <a href="/" title="Readings"><span class="material-icons">list</span></a>
-      <a href="/groupreadings" title="Group Readings"><span class="material-icons">format_list_numbered_rtl</span></a>
-      <a href="/dailystats" title="Daily stats"><span class="material-icons">insights</span></a>
-      <a href="#" id="newreader" title="Add reader"><span class="material-icons">person_add_alt</span></a>
-      {{ if .CurrentUser.IsAdmin }}
-      <a href="#" id="newgroup" title="Add group"><span class="material-icons">group_add</span></a>
-      {{ end }}
-      <a href="/logout"><span class="material-icons">exit_to_app</span></a>
-    </div>
+    {{ block "menu_burger" .}}{{end}}
+
+    <h1>Settings</h1>
+
+  <div>
+    <a href="#" id="newreader" title="Add reader">add reader</a>
+    {{ if .CurrentUser.IsAdmin }}
+    <a href="#" id="newgroup" title="Add group">add group</a>
+    {{ end }}
+  </div>
 
 <div style="float: left;">
-  <table id="readerslist">
+  <table id="readerslist_">
     <thead>
     <tr>
       <th>#</th>
@@ -36,6 +35,32 @@
   <tr>
       <td>{{.ID}}</td>
       <td>{{.Name}}</td>
+  </tr>
+  {{ end }}
+  <tbody>
+  </table>
+</div>
+
+<div style="float: left;">
+  <table>
+    <thead>
+    <tr>
+      <th>Group Name</th>
+      <th>Readers</th>
+    </tr>
+    </thead>
+    <tbody id="tgroupreaders">
+    <tr>
+      <td colspan="2"><a href="#" id="joinagroup">Join a new group</a></td>
+    </tr>
+  {{ range $key, $value := .GroupReaders}}
+  <tr>
+      <td>{{$key}}</td>
+      <td><ul>
+      {{range $value }}
+        <li>{{.Name}} <a href="#" gid="{{.GroupID}}" rid="{{.ID}}">x</a></li>
+      {{end}}
+      </ul></td>
   </tr>
   {{ end }}
   <tbody>
@@ -72,32 +97,6 @@
       </table>
     </div>
 {{ end }}
-<div style="float: left;">&nbsp;</div>
-<div style="float: left;">
-  <table>
-    <thead>
-    <tr>
-      <th>Group Name</th>
-      <th>Readers</th>
-    </tr>
-    </thead>
-    <tbody id="tgroupreaders">
-    <tr>
-      <td colspan="2"><a href="#" id="joinagroup">Join a new group</a></td>
-    </tr>
-  {{ range $key, $value := .GroupReaders}}
-  <tr>
-      <td>{{$key}}</td>
-      <td><ul>
-      {{range $value }}
-        <li>{{.Name}} <a href="#" gid="{{.GroupID}}" rid="{{.ID}}">x</a></li>
-      {{end}}
-      </ul></td>
-  </tr>
-  {{ end }}
-  <tbody>
-  </table>
-</div>
 
     <!-- The Reader Modal -->
     <div id="readerModal" class="modal">
