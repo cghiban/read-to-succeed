@@ -117,11 +117,10 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 		//IsAdmin       bool
 	}{
 		CurrentReader: reader,
-		//Readers:       strings.Split(*s.readers, ","),
-		Readers:  readers,
-		Readings: readings,
-		Today:    time.Now().Format("2006-01-02"),
-		Stats:    stats,
+		Readers:       readers,
+		Readings:      readings,
+		Today:         time.Now().Format("2006-01-02"),
+		Stats:         stats,
 		//IsAdmin:  isAdmin,
 	}
 

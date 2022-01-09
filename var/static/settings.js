@@ -30,13 +30,13 @@ document.querySelector("#joinagroup").addEventListener('click', (ev) => {
     // populate select w/ readers
     let groupreader_select = document.querySelector("select[name=groupreader]");
     groupreader_select.childNodes.forEach(e => e.remove());
-    let tRows = document.querySelector("#readerslist").rows;
+    let tRows = document.querySelector("#readerstable").rows;
     for (let i = 1; i < tRows.length; i++) {
         const row = tRows[i],
             cells = row.cells;
         const o = document.createElement("option");
-        o.value = cells[0].innerText;
-        o.innerText = cells[1].innerText;
+        o.innerText = cells[0].innerText;
+        o.value = cells[0].getAttribute("data__reader_id");
         groupreader_select.appendChild(o);
     }
 });
@@ -157,7 +157,7 @@ document.querySelectorAll('#usergroups input[type=checkbox]').forEach( cb => {
 
 //var _dbg;
 let doSearchGroups = function(params) {
-    console.info("doing the search...", params);
+    //console.info("doing the search...", params);
 
     let grouplist_div = document.querySelector("#grouplist");
     grouplist_div.childNodes.forEach(e => e.remove());

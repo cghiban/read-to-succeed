@@ -23,18 +23,16 @@
   </div>
 
 <div style="float: left; margin: 0 10px;">
-  <table id="readerslist_">
+  <table id="readerstable">
     <thead>
     <tr>
-      <th>#</th>
       <th>Reader Name</th>
     </tr>
     </thead>
     <tbody>
   {{ range .Readers}}
   <tr>
-      <td>{{.ID}}</td>
-      <td>{{.Name}}</td>
+      <td data__reader_id="{{.ID}}">{{.Name}}</td>
   </tr>
   {{ end }}
   <tbody>
@@ -51,7 +49,7 @@
     </thead>
     <tbody id="tgroupreaders">
     <tr>
-      <td colspan="2"><a href="#" id="joinagroup">Join a new group</a></td>
+      <td colspan="2"><a href="#" id="joinagroup">join a new group</a></td>
     </tr>
   {{ range $key, $value := .GroupReaders}}
   <tr>

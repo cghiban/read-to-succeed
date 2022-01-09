@@ -747,7 +747,7 @@ func (ds *DataStore) FindNewGroupsForReader(q string, readerID int) ([]Group, er
 	LEFT JOIN readers_groups rg ON g.id = rg.group_id 
 	WHERE rg.group_ID IS NULL 
 		AND ((status='public' AND name LIKE '%'|| ? ||'%') OR code = ?)`
-	fmt.Printf("%s [%s, %s]\n", query, fmt.Sprintf("%%%s%%", q), q)
+	//fmt.Printf("%s [%s, %s]\n", query, fmt.Sprintf("%%%s%%", q), q)
 
 	groups := []Group{}
 	var g Group
