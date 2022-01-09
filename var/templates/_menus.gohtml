@@ -1,0 +1,35 @@
+{{ define "menu_burger"}}
+  <section class="top-nav">
+    <div id="logo">
+     Read 2 Succeed
+    </div>
+    <input id="menu-toggle" type="checkbox" />
+    <label class='menu-button-container' for="menu-toggle">
+    <div class='menu-button'></div>
+  </label>
+    <ul class="menu">
+      <li><a href="/" title="">my readings</a></li>
+      <li><a href="/groupreadings" title="Group Readings">my groups</a></li>
+      <li><a href="/dailystats" title="Daily stats">daily stats</a></li>
+      <li><a href="/settings" title="settings">settings</a></li>
+      <li><a href="/about">about</a></li>
+      <li><a href="/logout">logout</a></li>
+    </ul>
+  </section>
+{{end}}
+
+{{ define "menu_outside"}}
+  <section class="top-nav">
+    <div id="logo">
+     Read 2 Succeed
+    </div>
+    <input id="menu-toggle" type="checkbox" />
+    <label class='menu-button-container' for="menu-toggle">
+    <div class='menu-button'></div>
+  </label>
+    <ul class="menu">
+      <li><a href="/" title="home">home</a></li>
+      <li><a href="/about">about</a></li>
+    </ul>
+  </section>
+{{end}}

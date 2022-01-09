@@ -1,33 +1,27 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inconsolata">
-        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <link rel="stylesheet" href="/static/styles.css">
         <title>Reading Log - Read to Succeed</title>
     </head>
   <body>
-    <div class="welcome-center">
-      <a href="/library" title="my books"><span class="material-icons">book</span></a>
-      <a href="#" id="addentry" title="add reading"><span class="material-icons">add_circle</span></a>
-      <a href="/groupreadings" title="Group Readings"><span class="material-icons">format_list_numbered_rtl</span></a>
-      <a href="/dailystats" title="Daily stats"><span class="material-icons">insights</span></a>
-      <a href="#" id="togglestats" title="stats"><span class="material-icons">show_chart</span></a>
-      <a href="/settings" title="settings"><span class="material-icons">manage_accounts</span></a>
-      <a href="/logout"><span class="material-icons">exit_to_app</span></a>
-    </div>
 
-  <div>
+  {{ block "menu_burger" .}}{{end}}
+
+  <h1>Reading Log</h1>
+  
+  <div class="sub-nav">
       <select id="readers">
   {{- $cr := .CurrentReader -}}
       <option value="">-= pick a reader =-</option>
   {{ range .Readers -}}
-      <option value="{{.Name}}" {{if eq .Name $cr}}selected{{end}}>{{.ID}}.{{.Name}}</option>
+      <option value="{{.Name}}" {{if eq .Name $cr}}selected{{end}}>{{.Name}}</option>
   {{ end }}
       </select>
+      <a href="#" id="addentry" title="add reading">add entry <button> + </button></a>
+      <a href="#" id="togglestats" title="stats">show totals</a>
   </div>
 
     <div id="stats" hidden>
@@ -40,11 +34,10 @@
       <div><a href="/dailystats">View last 30 days</a></div>
     </div>
 
-<div style="overflow-x:auto;">
-  <table>
+<div style="overflow-x:auto;" id="content">
+  <table id="readinglist">
     <thead>
     <tr>
-      <th>#</th>
       <th>Reader</th>
       <th>Author</th>
       <th>Title</th>
@@ -56,10 +49,13 @@
     <tbody>
   {{ range .Readings}}
   <tr>
-      <td>{{.ID}}</td>
       <td>{{.ReaderName}}</td>
       <td>{{.BookAuthor}}</td>
-      <td>{{.BookTitle}}</td>
+      <td>{{.BookTitle}}
+        <a href="#" id="addentry" data__reader="{{.ReaderName}}" data__author="{{.BookAuthor}}" data__title="{{.BookTitle}}">
+          <button> + </button>
+        </a>
+      </td>
       <td>{{dayToDate .Day}}</td>
       <td>{{.Duration}}m</td>
       <td>{{dateISOish .CreatedOn}}</td>

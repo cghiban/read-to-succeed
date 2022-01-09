@@ -9,17 +9,12 @@
 	<title>Reading Log - Read to Succeed</title>
   </head>
   <body>
-    <div class="welcome-center">
-      <select id="readers">
-  {{- $cr := .CurrentReader -}}
-      <option value="">-= pick a reader =-</option>
-  {{ range .Readers -}}
-      <option value="{{.Name}}" {{if eq .Name $cr}}selected{{end}}>{{.ID}}.{{.Name}}</option>
-  {{ end }}
-      </select>
-      <a href="#" id="addentry" title="add reading"><span class="material-icons">add_circle</span></a>
-      <a href="#" id="togglestats" title="stats"><span class="material-icons">show_chart</span></a>
-      <a href="/settings" title="settings"><span class="material-icons">manage_accounts</span></a>
+
+    {{ block "menu_burger" .}}{{end}}
+    <h1>Stats</h1>
+    <div class="sub-nav">
+      <a href="#" id="addentry" title="add reading">add entry <button> + </button></a>
+      <a href="#" id="togglestats" title="stats">display totals</a>
     </div>
 
     <div id="stats" hidden>
@@ -31,7 +26,7 @@
       </ul>
     </div>
 
-<div style="overflow-x:auto;">
+<div style="overflow-x:auto;" id="content">
   <table>
     <thead>
     <tr>

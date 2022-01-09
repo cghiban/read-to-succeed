@@ -9,14 +9,22 @@
         <title>About - Read to Succeed</title>
     </head>
   <body>
-    <div class="welcome-center">
-        <a href="/">Home</a>
-        <a href="/login">Login</a>
-        <h1>About this site</h1>
-    </div>
+    {{ block "menu_outside" .}}{{end}}
+    <h1>About this site</h1>
 
-    <div>
-    This is a space where you can log your or your children's books and how much time was spent reading.
+    <div id="content">
+      This is a space where you can log your or your children's books and how much time was spent reading.
+      <h3>How does this thing work?</h3>
+      <p>
+        <ul>
+          <li> parent creates an account</li>
+          <li> parent adds their chid/ren and themselves as readers</li>
+          <li> parent adds readers to a group</li>
+          <li> the students (or their parents) log what they read and for how long</li>
+          <li> view what was read</li>
+          <li> view some stats</li>
+        </ul>
+      </p>
     </div>
   </body>
 </html>

@@ -38,7 +38,7 @@ func NewService(l *log.Logger, store *data.DataStore, sessionKey *string, resour
 			if err != nil {
 				return ""
 			}
-			return t.Format("Jan 2, 2006")
+			return t.Format("Jan 2")
 		},
 		"dateISOish": func(t time.Time) string { return t.Format("2006-01-02 3:04pm") },
 	}
@@ -81,6 +81,7 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 	//userIDv := session.Values["user_id"]
 	//userID := userIDv.(int)
 	userID := session.Values["user_id"].(int)
+	//isAdmin := session.Values["is_admin"].(bool)
 	//fmt.Printf("userID: %T\t%q", userID, userID)
 
 	// TODO XXX paginate results:
@@ -113,13 +114,14 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 		Readings      []data.Reading
 		Today         string
 		Stats         []data.TotalReadingStat
+		//IsAdmin       bool
 	}{
 		CurrentReader: reader,
-		//Readers:       strings.Split(*s.readers, ","),
-		Readers:  readers,
-		Readings: readings,
-		Today:    time.Now().Format("2006-01-02"),
-		Stats:    stats,
+		Readers:       readers,
+		Readings:      readings,
+		Today:         time.Now().Format("2006-01-02"),
+		Stats:         stats,
+		//IsAdmin:  isAdmin,
 	}
 
 	//s.l.Printf("stats: %#v\n", stats)
@@ -321,15 +323,19 @@ func (s *Service) Settings(rw http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		Readers      []data.Reader
+		HasNoReaders bool
 		UserGroups   []data.Group
 		GroupReaders map[string][]data.GReader
+		CurrentUser  data.AuthUser
 	}{
 		Readers:      readers,
+		HasNoReaders: len(readers) == 0,
 		UserGroups:   userGroups,
 		GroupReaders: groupReaders,
+		CurrentUser:  *user,
 	}
 
-	//log.Printf("data:%v+\n", data)
+	//log.Printf("data:%+v\n", data.CurrentUser)
 
 	rw.Header().Set("Cache-Control", "no-cache")
 	if err := s.t.ExecuteTemplate(rw, "settings.gohtml", data); err != nil {
@@ -458,36 +464,44 @@ func (s *Service) FindAvailableGroups(rw http.ResponseWriter, r *http.Request) {
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.Header().Set("Cache-Control", "no-cache")
+	var err error
 
-	//user := r.Context().Value("user").(*data.AuthUser)
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 	params := struct {
 		Query    string `json:"name"`
 		ReaderID int    `json:"reader"`
 	}{}
-	if err := decoder.Decode(&params); err != nil {
+	if err = decoder.Decode(&params); err != nil {
 		log.Println(err)
 		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
 		return
 	}
 
-	fmt.Printf("params: %+v", params)
-	groups, err := s.store.FindNewGroupsForReader(params.Query, params.ReaderID)
+	groups := []data.Group{}
+	if len(params.Query) < 3 {
+		encoder := json.NewEncoder(rw)
+		encoder.Encode(groups)
+		return
+	}
+
+	fmt.Printf("FindNewGroupsForReader > params: %+v\n", params)
+	// TODO - also pass the current user_id
+	groups, err = s.store.FindNewGroupsForReader(params.Query, params.ReaderID)
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, "{\"status\":\"error\"}", http.StatusInternalServerError)
 		return
 	}
-	fmt.Printf("groups: %+v", groups)
+	//fmt.Printf("groups: %+v\n", groups)
 	encoder := json.NewEncoder(rw)
 	encoder.Encode(groups)
-
-	//rw.Write([]byte(`{"ok":"1"}`))
 }
 
-// JoinGroup - find group a reader can join to
+// JoinGroup - join a group
 func (s *Service) JoinGroup(rw http.ResponseWriter, r *http.Request) {
+
+	// TODO - this needs some work as anyone can join any group :(
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.Header().Set("Cache-Control", "no-cache")
@@ -526,6 +540,7 @@ func (s *Service) JoinGroup(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// making sure it's user's reader
 	if reader.UserID != user.ID {
 		http.Error(rw, `{"status":"error", "message":"Not allowed!"}`, http.StatusBadRequest)
 		return

@@ -16,7 +16,12 @@ Tiny webapp for recording ones read book, articles, etc
 - [ ] pagination
 - [x] make use of csrf
 - [x] add midlewares
-
+- [x] make some users admins (add is_admin column)
+- [ ] only admins create groups
+- [ ] groups should have a start and an ending
+- [ ] remember last reader on home
+- [ ] make a proper menu (just text)
+- [ ] users may reset password (integrate with mailgun)
 
 database (sqlite):
 

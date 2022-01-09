@@ -13,24 +13,46 @@ if (stats) {
     stats.hidden = true;
 }
 
-document.querySelector("#addentry").addEventListener('click', (ev) => {
-    reader.value = readers.value;
-    modal.style.display = "block";
+let addButtons = document.querySelectorAll(".addentry, #addentry");
+addButtons.forEach(b => {
+    console.log(b);
+    b.addEventListener('click', (ev) => {
+        if (b.getAttribute("data__reader")) {
+            reader.value = b.getAttribute("data__reader");
+        } else {
+            reader.value = readers.value;
+        }
+        if (b.getAttribute("data__author")) {
+            author.value = b.getAttribute("data__author");
+        } else {
+            author.value = "";
+        }
+        if (b.getAttribute("data__title")) {
+            title.value = b.getAttribute("data__title");
+        } else {
+            title.value = "";
+        }
+        modal.style.display = "block";
+    });
 });
 
-document.querySelector('#togglestats').addEventListener('click', (ev) => {
-    stats.hidden = !stats.hidden;
-});
+if (document.querySelector('#togglestats')) {
+    document.querySelector('#togglestats').addEventListener('click', (ev) => {
+        stats.hidden = !stats.hidden;
+    });
+}
 
-readers.addEventListener("change", (ev) => {
-    let v = ev.target.value;
-    if (v === "") {
-        document.location.href = "/";
-    }
-    else {
-        document.location.href = "/?reader=" + v;
-    }
-});
+if (readers) {
+    readers.addEventListener("change", (ev) => {
+        let v = ev.target.value;
+        if (v === "") {
+            document.location.href = "/";
+        }
+        else {
+            document.location.href = "/?reader=" + v;
+        }
+    });
+}
 
 document.querySelector('form#addreading button').addEventListener('click', (ev) => {
     let form = document.querySelector('form#addreading'),
@@ -38,23 +60,6 @@ document.querySelector('form#addreading button').addEventListener('click', (ev) 
     console.log('valid: ', form.checkValidity());
     if (!form.checkValidity())
         return;
-    //form.method = 'POST';
-    //form.action = '/add';
-    //form.submit();
-
-    /*var request = new XMLHttpRequest();
-    request.open("POST", "/add");
-    request.onload = function(oEvent) {
-        if (request.status == 200) {
-          //oOutput.innerHTML = "Uploaded!";
-          console.log("Uploaded");
-        } else {
-          //oOutput.innerHTML = "Error " + oReq.status + " occurred when trying to upload your file.<br \/>";
-          console.log("Error " + request.status + " occurred when trying to upload your file.<br \/>");
-        }
-      };
-    request.send(new FormData(form));
-    ev.preventDefault();*/
 
     async function postData(url = '', data = {}) {
         // Default options are marked with *
@@ -91,26 +96,23 @@ document.querySelector('form#addreading button').addEventListener('click', (ev) 
 
     ev.preventDefault();
 }, false);
-//console.log(a.getAttribute('data-file'));
 
-// When the user clicks on <span> (x), close the modal
-span.onclick = function() {
-    //video.pause();
-    modal.style.display = "none";
-}
-
-// When the user clicks anywhere outside of the modal, close it
-window.onclick = function(event) {
-    if (event.target == modal) {
-        //video.pause();
+if (modal) {
+    // When the user clicks on <span> (x), close the modal
+    span.onclick = function() {
         modal.style.display = "none";
     }
-}
 
-document.body.addEventListener('keyup', function(e) {
-    if (e.key == "Escape") {
-        //msg.textContent += 'Escape pressed:'
-        modal.style.display = "none";
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
     }
-});
 
+    document.body.addEventListener('keyup', function(e) {
+        if (e.key == "Escape") {
+            modal.style.display = "none";
+        }
+    });
+}
