@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"read2succeed/data"
 	"strings"
@@ -36,7 +35,7 @@ func (s *Service) UserSignUp(rw http.ResponseWriter, r *http.Request) {
 	} else if r.Method == "POST" {
 		r.ParseForm()
 		if err := s.t.ExecuteTemplate(rw, "register.gohtml", formData); err != nil {
-			log.Println(err)
+			s.l.Println(err)
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
 
@@ -44,10 +43,7 @@ func (s *Service) UserSignUp(rw http.ResponseWriter, r *http.Request) {
 		email := strings.Trim(r.Form.Get("email"), " ")
 		password := strings.Trim(r.Form.Get("password"), " ")
 
-		log.Println(email, password)
-
 		user, err := s.store.GetUser(email)
-		s.l.Println("from GetUser:", err)
 		if user != nil {
 			formData["Message"] = "This email is already in use."
 			if err := s.t.ExecuteTemplate(rw, "register.gohtml", formData); err != nil {
@@ -66,7 +62,7 @@ func (s *Service) UserSignUp(rw http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(rw, "Unable to sign user up", http.StatusInternalServerError)
 		} else {
-			s.l.Printf("user: %#v", user)
+			s.l.Printf("just signed up: %#v", user.Email)
 			http.Redirect(rw, r, "/login", http.StatusFound)
 		}
 	}

@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/mattn/go-sqlite3 v1.14.10
 	github.com/nicholasjackson/env v0.6.0
+	github.com/unknwon/paginater v0.0.0-20200328080006-042474bd0eae
 )
 
 require (

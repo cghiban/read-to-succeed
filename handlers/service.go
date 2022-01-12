@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"read2succeed/data"
 	"read2succeed/google_books"
 	"sort"
@@ -17,6 +18,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/gorilla/sessions"
+	"github.com/unknwon/paginater"
 )
 
 // Service data struct
@@ -84,9 +86,23 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 	//isAdmin := session.Values["is_admin"].(bool)
 	//fmt.Printf("userID: %T\t%q", userID, userID)
 
-	// TODO XXX paginate results:
-	// https://github.com/vcraescu/go-paginator
-	readings, err := s.store.ListUserReadings(userID, reader)
+	var page int
+	itemsPerPage := 20
+	pageParam := r.URL.Query().Get("page")
+	page, err = strconv.Atoi(pageParam)
+	if err != nil {
+		page = 1
+	}
+
+	offset := (page - 1) * itemsPerPage
+	req := data.UserReadingsRequest{
+		UserID: userID,
+		Reader: reader,
+		Limit:  &itemsPerPage,
+		Offset: &offset,
+	}
+
+	output, err := s.store.ListUserReadings(req)
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -99,17 +115,34 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
 
-	//readers := session.Values("readers")
-	//val := session.Values["readers"]
-	//fmt.Printf("%+v\n", val)
 	readers, err := s.store.GetUserReaders(userID)
 	if err != nil {
 		s.l.Panicln("stats err: ", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
 
+	// Arguments:
+	// - Total number of rows
+	// - Number of rows in one page
+	// - Current page number
+	// - Number of page links to be displayed
+	p := paginater.New(output.Pagination.Total, itemsPerPage, page, 10)
+
+	qq := url.Values{}
+	qqs := r.URL.Path
+	for k := range r.URL.Query() {
+		if k != "page" {
+			qq.Set(k, r.URL.Query().Get(k))
+			fmt.Println("added:", k)
+		}
+	}
+	if len(qqs) > 0 {
+		qqs = qqs + "?" + qq.Encode()
+	}
 	data := struct {
 		CurrentReader string
+		Page          *paginater.Paginater
+		PageQueryRaw  string
 		Readers       []data.Reader
 		Readings      []data.Reading
 		Today         string
@@ -117,14 +150,16 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 		//IsAdmin       bool
 	}{
 		CurrentReader: reader,
+		Page:          p,
+		PageQueryRaw:  qqs,
 		Readers:       readers,
-		Readings:      readings,
+		Readings:      output.Readings,
 		Today:         time.Now().Format("2006-01-02"),
 		Stats:         stats,
 		//IsAdmin:  isAdmin,
 	}
 
-	//s.l.Printf("stats: %#v\n", stats)
+	//s.l.Printf("pagination: %#v\n", data.Pagination)
 
 	if err := s.t.ExecuteTemplate(rw, "index.gohtml", data); err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -134,7 +169,6 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 // GetGroupReadings - list user's/users' read books
 func (s *Service) GetGroupReadings(rw http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value("user").(*data.AuthUser)
-	log.Println("user:", user)
 
 	group := r.URL.Query().Get("group")
 	if group == "" {
@@ -562,7 +596,6 @@ func (s *Service) LeaveGroup(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Cache-Control", "no-cache")
 
 	user := r.Context().Value("user").(*data.AuthUser)
-	log.Println("user:", user)
 
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
