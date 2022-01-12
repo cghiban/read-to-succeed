@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"read2succeed/data"
 	"strings"
@@ -35,19 +34,12 @@ func (s *Service) UserSignUp(rw http.ResponseWriter, r *http.Request) {
 		}
 	} else if r.Method == "POST" {
 		r.ParseForm()
-		if err := s.t.ExecuteTemplate(rw, "register.gohtml", formData); err != nil {
-			log.Println(err)
-			http.Error(rw, err.Error(), http.StatusInternalServerError)
-		}
 
 		name := strings.Trim(r.Form.Get("name"), " ")
 		email := strings.Trim(r.Form.Get("email"), " ")
 		password := strings.Trim(r.Form.Get("password"), " ")
 
-		log.Println(email, password)
-
-		user, err := s.store.GetUser(email)
-		s.l.Println("from GetUser:", err)
+		user, _ := s.store.GetUser(email)
 		if user != nil {
 			formData["Message"] = "This email is already in use."
 			if err := s.t.ExecuteTemplate(rw, "register.gohtml", formData); err != nil {
@@ -62,11 +54,16 @@ func (s *Service) UserSignUp(rw http.ResponseWriter, r *http.Request) {
 			Pass:  password,
 		}
 
-		err = s.store.CreateUser(user)
+		err := s.store.CreateUser(user)
 		if err != nil {
 			http.Error(rw, "Unable to sign user up", http.StatusInternalServerError)
 		} else {
-			s.l.Printf("user: %#v", user)
+			s.l.Printf("just signed up: %#v", user.Email)
+			session, err := s.session.Get(r, "session")
+			if err == nil {
+				session.AddFlash("AccountCreated")
+				session.Save(r, rw)
+			}
 			http.Redirect(rw, r, "/login", http.StatusFound)
 		}
 	}
@@ -79,6 +76,15 @@ func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "GET" {
+
+		session, err := s.session.Get(r, "session")
+		if err == nil {
+			msgs := session.Flashes()
+			session.Save(r, rw) // needs to clear the flashes
+			if len(msgs) > 0 && msgs[0].(string) == "AccountCreated" {
+				formData["AccountCreated"] = true
+			}
+		}
 
 		rw.Header().Add("Cache-Control", "no-cache")
 		if err := s.t.ExecuteTemplate(rw, "login.gohtml", formData); err != nil {

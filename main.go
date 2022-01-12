@@ -65,12 +65,7 @@ func init() {
 
 func main() {
 	l := log.New(os.Stdout, "reading 2 succees", log.LstdFlags)
-
 	l.Println("about to start server on ", *bindAddress)
-
-	//dataStore.GetStatsDaily(1)
-
-	//return
 
 	r2sservice := handlers.NewService(l, dataStore, sessionKey, resources)
 
@@ -79,7 +74,6 @@ func main() {
 		Service: r2sservice,
 	}
 
-	//sm := http.NewServeMux()
 	sm := mux.NewRouter()
 	getRouter := sm.Methods("GET").Subrouter()
 	getRouter.HandleFunc("/", r2sservice.GetReadings)

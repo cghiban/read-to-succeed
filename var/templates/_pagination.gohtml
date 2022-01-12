@@ -1,0 +1,23 @@
+{{define "pagination"}}
+{{if gt .Page.TotalPages 1}}
+<div class=".pagination">
+    {{if not .Page.IsFirst}}<a href="{{.PageQueryRaw}}">[First]</a>{{end}}
+    {{if .Page.HasPrevious}}<a href="{{.PageQueryRaw}}&page={{.Page.Previous}}">[Previous]</a>{{end}}
+
+    {{ $path := .PageQueryRaw}}
+    {{range .Page.Pages}}
+        {{if eq .Num -1}}
+        ...
+        {{else}}
+            {{if .IsCurrent}}<strong>{{.Num}}</strong>
+            {{else}}
+        <a href="{{$path}}&page={{.Num}}">{{.Num}}</a>
+            {{end}}
+        {{end}}
+    {{end}}
+
+    {{if .Page.HasNext}}<a href="{{.PageQueryRaw}}&page={{.Page.Next}}">[Next]</a>{{end}}
+    {{if not .Page.IsLast}}<a href="{{.PageQueryRaw}}&page={{.Page.TotalPages}}">[Last]</a>{{end}}
+</div>
+{{end}}
+{{end}}

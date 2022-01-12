@@ -225,53 +225,94 @@ func (ds *DataStore) AddReading(r *Reading) error {
 	return nil
 }
 
+type Pagination struct {
+	Total  int
+	Limit  int
+	Offset int
+}
+
+type UserReadingsRequest struct {
+	UserID int
+	Reader string
+	Limit  *int
+	Offset *int
+}
+
+type UserReadingsResponse struct {
+	Readings   []Reading
+	Pagination Pagination
+}
+
 // ListUserReadings - retrieves all records or of the given reader passed as args
-func (ds *DataStore) ListUserReadings(userID int, args ...string) ([]Reading, error) {
-	readings := []Reading{}
+func (ds *DataStore) ListUserReadings(req UserReadingsRequest) (UserReadingsResponse, error) {
+	output := UserReadingsResponse{}
+
 	queryFmt := `
         SELECT id, reader, book_author, book_title, day, duration, created
-        FROM readings WHERE user_id = ? %s
-        ORDER BY id desc
-    `
-	var query string
+        FROM readings WHERE user_id = ? %s`
+	var query, where string
 	var rows *sql.Rows
 	var err error
-	if len(args) == 1 && args[0] != "" {
-		where := " AND reader = ? "
+	var args []interface{}
+	if req.Reader != "" {
+		where = " AND reader = ? "
 		query = fmt.Sprintf(queryFmt, where)
-		rows, err = ds.DB.Query(query, userID, args[0])
+		args = append(args, req.UserID, req.Reader)
 	} else {
 		query = fmt.Sprintf(queryFmt, "")
-		rows, err = ds.DB.Query(query, userID)
+		args = append(args, req.UserID)
 	}
 
-	// fmt.Println(query, args[0])
-	// fmt.Printf("%#v", args)
+	var limit, offset int
+	if req.Limit != nil && *req.Limit <= 100 {
+		limit = *req.Limit
+	} else {
+		limit = 20
+	}
 
+	if req.Offset != nil {
+		offset = *req.Offset
+	}
+
+	query += fmt.Sprintf(" ORDER BY id desc LIMIT %d OFFSET %d", limit, offset)
+
+	rows, err = ds.DB.Query(query, args...)
 	if err != nil {
-		return readings, err
+		return output, err
 	}
 	defer rows.Close()
-	var r Reading
 
-	//var day, created, duration string
+	readings := []Reading{}
+	var r Reading
 	var created string
 	for rows.Next() {
-		//rows.Scan(&r.ID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &day, &duration, &created)
 		rows.Scan(&r.ID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &r.Day, &r.Duration, &created)
-
-		//ds.l.Println(day, duration, created)
 		t, _ := time.Parse("2006-01-02T15:04:05Z", created)
 		r.CreatedOn = t
-		/*t, _ = time.Parse("2006-01-02T00:00:00Z", day)
-		r.Day = t
-		r.Duration, _ = time.ParseDuration(duration)*/
-
-		//ds.l.Println(r)
 		readings = append(readings, r)
 	}
 
-	return readings, nil
+	output.Readings = readings
+
+	totalQuery := "SELECT count(*) FROM readings WHERE user_id = ? " + where
+	totalQuery += " ORDER BY id desc"
+
+	//ds.L.Println(totalQuery, args)
+
+	row := ds.DB.QueryRow(totalQuery, args...)
+	var total int
+	err = row.Scan(&total)
+	if err != nil {
+		ds.L.Printf("can't query totals: %+v", err)
+		return output, err
+	}
+	output.Pagination = Pagination{
+		Limit:  limit,
+		Offset: offset,
+		Total:  total,
+	}
+
+	return output, nil
 }
 
 type GroupReading struct {
@@ -329,7 +370,6 @@ func (ds *DataStore) ListUserGroupsReadings(userID int, args ...int) ([]GroupRea
 	//var day, created, duration string
 	var created string
 	for rows.Next() {
-		// g.id, g.name, r.reader, r.reader_id, r.book_author, r.book_title, r.day, r.duration, r.created
 		rows.Scan(
 			&r.GroupID,
 			&r.GroupName,
@@ -389,9 +429,6 @@ func (ds *DataStore) GetStatsTotals(userID int) ([]TotalReadingStat, error) {
 	var rows *sql.Rows
 	var err error
 	rows, err = ds.DB.Query(query, userID)
-
-	//fmt.Println(query, userID)
-	// fmt.Printf("%#v", args)
 
 	if err != nil {
 		return totals, err
