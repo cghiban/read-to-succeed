@@ -133,7 +133,6 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 	for k := range r.URL.Query() {
 		if k != "page" {
 			qq.Set(k, r.URL.Query().Get(k))
-			fmt.Println("added:", k)
 		}
 	}
 	if len(qqs) > 0 {
@@ -544,8 +543,9 @@ func (s *Service) JoinGroup(rw http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 	params := struct {
-		GroupID  int `json:"group"`
-		ReaderID int `json:"reader"`
+		GroupID  int    `json:"group"`
+		ReaderID int    `json:"reader"`
+		Query    string `json:"query"`
 	}{}
 	if err := decoder.Decode(&params); err != nil {
 		log.Println(err)
@@ -557,15 +557,15 @@ func (s *Service) JoinGroup(rw http.ResponseWriter, r *http.Request) {
 
 	group, err := s.store.GetGroupByID(params.GroupID)
 	if err != nil {
-		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
 		return
 	}
-	user := r.Context().Value("user").(*data.AuthUser)
 
-	/*if group.UserID != user.ID {
-		http.Error(rw, "{\"status\":\"error\"}", http.StatusNotFound)
+	if group.Status == "private" && group.AccessCode != params.Query {
+		s.l.Printf("can't join reader %d to private group %d\n", params.ReaderID, group.ID)
+		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
 		return
-	}*/
+	}
 
 	reader, err := s.store.GetReaderByID(params.ReaderID)
 	if err != nil {
@@ -573,6 +573,8 @@ func (s *Service) JoinGroup(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, `{"status":"error", "message":"Reader not found!"}`, http.StatusInternalServerError)
 		return
 	}
+
+	user := r.Context().Value("user").(*data.AuthUser)
 
 	// making sure it's user's reader
 	if reader.UserID != user.ID {

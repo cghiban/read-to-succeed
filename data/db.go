@@ -44,6 +44,7 @@ type Reading struct {
 	BookTitle  string    `json:"title"`
 	Day        string    `json:"day"`
 	Duration   int       `json:"duration"`
+	Note       string    `json:"note"`
 	CreatedOn  time.Time `json:"-"`
 }
 
@@ -199,8 +200,8 @@ func (ds *DataStore) AddReading(r *Reading) error {
 	//fmt.Printf("found reader: %+v", reader)
 
 	query := `
-        INSERT INTO readings (user_id, reader, reader_id, book_author, book_title, day, duration, created)
-        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
+        INSERT INTO readings (user_id, reader, reader_id, book_author, book_title, day, duration, note, created)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
     `
 
 	stmt, err := ds.DB.Prepare(query)
@@ -209,7 +210,7 @@ func (ds *DataStore) AddReading(r *Reading) error {
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(r.UserID, r.ReaderName, reader.ID, r.BookAuthor, r.BookTitle, r.Day, r.Duration)
+	res, err := stmt.Exec(r.UserID, r.ReaderName, reader.ID, r.BookAuthor, r.BookTitle, r.Day, r.Duration, r.Note)
 	if err != nil {
 		return err
 	}
@@ -248,7 +249,7 @@ func (ds *DataStore) ListUserReadings(req UserReadingsRequest) (UserReadingsResp
 	output := UserReadingsResponse{}
 
 	queryFmt := `
-        SELECT id, reader, book_author, book_title, day, duration, created
+        SELECT id, reader, book_author, book_title, day, duration, note, created
         FROM readings WHERE user_id = ? %s`
 	var query, where string
 	var rows *sql.Rows
@@ -286,7 +287,7 @@ func (ds *DataStore) ListUserReadings(req UserReadingsRequest) (UserReadingsResp
 	var r Reading
 	var created string
 	for rows.Next() {
-		rows.Scan(&r.ID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &r.Day, &r.Duration, &created)
+		rows.Scan(&r.ID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &r.Day, &r.Duration, &r.Note, &created)
 		t, _ := time.Parse("2006-01-02T15:04:05Z", created)
 		r.CreatedOn = t
 		readings = append(readings, r)

@@ -194,8 +194,9 @@ let doSearchGroups = function(params) {
                     let args = {
                         group: item["id"],
                         reader: parseInt(reader, 10),
+                        query: params["name"]
                     };
-                    //return;
+
                     postData("/joingroup", args)
                         .then(data => {
                             console.log(data);

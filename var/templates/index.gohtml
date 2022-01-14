@@ -41,6 +41,7 @@
       <th>Reader</th>
       <th>Author</th>
       <th>Title</th>
+      <th>Note</th>
       <th>Day</th>
       <th>Duration</th>
       <th>Added on</th>
@@ -56,6 +57,7 @@
           <button> + </button>
         </a>
       </td>
+      <td>{{.Note}}</td>
       <td>{{dayToDate .Day}}</td>
       <td>{{.Duration}}m</td>
       <td>{{dateISOish .CreatedOn}}</td>
@@ -97,7 +99,14 @@
           </div>
           <div>
             <label>Duration</label>
-            <input type="number" min="1" max="60" name="duration" required>
+            <input type="number" min="1" max="90" name="duration" required> <small>(minutes)<small>
+          </div>
+          <div>
+            <a href="#" id="show_note_box" onclick='document.querySelector("#notecontainer").style.display="block";this.parentNode.style.display="none";'>add a note</a>
+          </div>
+          <div id="notecontainer" style="display:none;">
+            <label>Note</label>
+            <input type="text" name="note">
           </div>
           <div>
             <label></label>

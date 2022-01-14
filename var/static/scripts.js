@@ -79,9 +79,10 @@ document.querySelector('form#addreading button').addEventListener('click', (ev) 
         return response.json(); // parses JSON response into native JavaScript objects
     };
     let data = {
-        reader: formData.get("reader"),
-        author: formData.get("author"),
-        title: formData.get("title"),
+        reader: formData.get("reader").trim(),
+        author: formData.get("author").trim(),
+        title: formData.get("title").trim(),
+        note: formData.get("note").trim(),
         day: formData.get("day"),
         duration: parseInt(formData.get("duration"),10),
     };
