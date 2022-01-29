@@ -176,54 +176,66 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 func (s *Service) GetGroupReadings(rw http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value("user").(*data.AuthUser)
 
-	group := r.URL.Query().Get("group")
-	if group == "" {
-		group = "0"
-	}
-	group_id, err := strconv.Atoi(group)
-	if err != nil {
-		log.Println(err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var page int
-	itemsPerPage := 20
-	pageParam := r.URL.Query().Get("page")
-	page, err = strconv.Atoi(pageParam)
-	if err != nil {
-		page = 1
-	}
-
-	offset := (page - 1) * itemsPerPage
-	req := data.GroupReadingsRequest{
-		UserID:  user.ID,
-		GroupID: group_id,
-		Limit:   &itemsPerPage,
-		Offset:  &offset,
-	}
-	output, err := s.store.ListUserGroupsReadings(req)
-	if err != nil {
-		log.Println(err)
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	p, qqs := _buildPaginater(output.Pagination.Total, itemsPerPage, page, r)
-
-	data := struct {
+	tmplData := struct {
+		GroupID      int
 		Readings     []data.GroupReading
 		Page         *paginater.Paginater
 		PageQueryRaw string
-	}{
-		Readings:     output.GroupReadings,
-		Page:         p,
-		PageQueryRaw: qqs,
+		GroupList    []data.GroupMemberCount
+	}{}
+
+	groupIDStr := r.URL.Query().Get("group")
+	if groupIDStr == "" {
+		userGroups, err := s.store.GetUserGroupMemberCount(user.ID)
+		if err != nil {
+			log.Println(err)
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		tmplData.GroupList = userGroups
+		//fmt.Printf("tmplData.GroupList: %+v", tmplData.GroupList)
+	} else {
+		groupID, err := strconv.Atoi(groupIDStr)
+		if err != nil {
+			log.Println(err)
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var page int
+		itemsPerPage := 20
+		pageParam := r.URL.Query().Get("page")
+		page, err = strconv.Atoi(pageParam)
+		if err != nil {
+			page = 1
+		}
+
+		offset := (page - 1) * itemsPerPage
+		req := data.GroupReadingsRequest{
+			UserID:  user.ID,
+			GroupID: groupID,
+			Limit:   &itemsPerPage,
+			Offset:  &offset,
+		}
+		output, err := s.store.ListUserGroupsReadings(req)
+		if err != nil {
+			log.Println(err)
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmplData.GroupID = groupID
+		tmplData.Page, tmplData.PageQueryRaw = _buildPaginater(output.Pagination.Total, itemsPerPage, page, r)
+
+		tmplData.Readings = output.GroupReadings
+		//tmplData.Page = p
+		//tmplData.PageQueryRaw = qqs
+
 	}
 
 	//s.l.Printf("stats: %#v\n", stats)
 
-	if err := s.t.ExecuteTemplate(rw, "group_readings.gohtml", data); err != nil {
+	if err := s.t.ExecuteTemplate(rw, "group_readings.gohtml", tmplData); err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
 
@@ -581,7 +593,7 @@ func (s *Service) JoinGroup(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("params: %+v\n", params)
+	fmt.Printf("join a group params: %+v\n", params)
 
 	group, err := s.store.GetGroupByID(params.GroupID)
 	if err != nil {

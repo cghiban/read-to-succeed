@@ -388,7 +388,7 @@ func (ds *DataStore) ListUserGroupsReadings(req GroupReadingsRequest) (GroupRead
 	}
 
 	query += fmt.Sprintf(" ORDER BY r.created DESC LIMIT %d OFFSET %d", limit, offset)
-	fmt.Println(query, req.UserID, req.GroupID)
+	//fmt.Println(query, req.UserID, req.GroupID)
 
 	rows, err = ds.DB.Query(query, args...)
 
@@ -428,7 +428,7 @@ func (ds *DataStore) ListUserGroupsReadings(req GroupReadingsRequest) (GroupRead
 	output.GroupReadings = readings
 
 	totalQuery := fmt.Sprintf(queryFmt, "count(*)", where)
-	ds.L.Println(totalQuery, args)
+	//ds.L.Println(totalQuery, args)
 
 	row := ds.DB.QueryRow(totalQuery, args...)
 	var total int
@@ -797,6 +797,56 @@ func (ds *DataStore) GetUserGroups(userID int) ([]Group, error) {
 			AccessCode: gCode,
 			Status:     gStatus,
 			CreatedOn:  t,
+		})
+	}
+
+	return groups, nil
+}
+
+type GroupMemberCount struct {
+	GroupID     int
+	GroupName   string
+	MemberCount int
+}
+
+// GetUserGroupMemberCount - retrieves user's groups with number of members
+func (ds *DataStore) GetUserGroupMemberCount(userID int) ([]GroupMemberCount, error) {
+	var groups []GroupMemberCount
+
+	query := `SELECT g.id, g.name, count(*) AS cnt
+		FROM groups g
+		JOIN group_readers gr ON g.id = gr.group_id
+		WHERE g.id IN (
+			-- my readers' groups
+			SELECT group_id
+			FROM group_readers
+			WHERE reader_id IN (
+				SELECT reader_id FROM readers
+				WHERE user_id = ?
+			)
+		)
+		GROUP BY g.id, g.name
+		ORDER BY cnt DESC, g.name ASC`
+
+	var rows *sql.Rows
+	var err error
+	rows, err = ds.DB.Query(query, userID)
+
+	if err != nil {
+		return groups, err
+	}
+	defer rows.Close()
+
+	var gName string
+	var gID, gCount int
+
+	for rows.Next() {
+		rows.Scan(&gID, &gName, &gCount)
+
+		groups = append(groups, GroupMemberCount{
+			GroupID:     int(gID),
+			GroupName:   gName,
+			MemberCount: gCount,
 		})
 	}
 
