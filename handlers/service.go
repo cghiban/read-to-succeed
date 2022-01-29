@@ -65,6 +65,29 @@ func NewService(l *log.Logger, store *data.DataStore, sessionKey *string, resour
 	return &Service{l: l, store: store, t: templates, session: sessStore}
 }
 
+func _buildPaginater(total, itemsPerPage, page int, r *http.Request) (*paginater.Paginater, string) {
+
+	// Arguments:
+	// - Total number of rows
+	// - Number of rows in one page
+	// - Current page number
+	// - Number of page links to be displayed
+	p := paginater.New(total, itemsPerPage, page, 10)
+
+	qq := url.Values{}
+	qqs := r.URL.Path
+	for k := range r.URL.Query() {
+		if k != "page" {
+			qq.Set(k, r.URL.Query().Get(k))
+		}
+	}
+	if len(qqs) > 0 {
+		qqs = qqs + "?" + qq.Encode()
+	}
+
+	return p, qqs
+}
+
 // GetReadings - list user's/users' read books
 func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 	session, err := s.session.Get(r, "session")
@@ -121,23 +144,7 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
 
-	// Arguments:
-	// - Total number of rows
-	// - Number of rows in one page
-	// - Current page number
-	// - Number of page links to be displayed
-	p := paginater.New(output.Pagination.Total, itemsPerPage, page, 10)
-
-	qq := url.Values{}
-	qqs := r.URL.Path
-	for k := range r.URL.Query() {
-		if k != "page" {
-			qq.Set(k, r.URL.Query().Get(k))
-		}
-	}
-	if len(qqs) > 0 {
-		qqs = qqs + "?" + qq.Encode()
-	}
+	p, qqs := _buildPaginater(output.Pagination.Total, itemsPerPage, page, r)
 	data := struct {
 		CurrentReader string
 		Page          *paginater.Paginater
@@ -180,17 +187,38 @@ func (s *Service) GetGroupReadings(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	readings, err := s.store.ListUserGroupsReadings(user.ID, group_id)
+	var page int
+	itemsPerPage := 20
+	pageParam := r.URL.Query().Get("page")
+	page, err = strconv.Atoi(pageParam)
+	if err != nil {
+		page = 1
+	}
+
+	offset := (page - 1) * itemsPerPage
+	req := data.GroupReadingsRequest{
+		UserID:  user.ID,
+		GroupID: group_id,
+		Limit:   &itemsPerPage,
+		Offset:  &offset,
+	}
+	output, err := s.store.ListUserGroupsReadings(req)
 	if err != nil {
 		log.Println(err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	p, qqs := _buildPaginater(output.Pagination.Total, itemsPerPage, page, r)
+
 	data := struct {
-		Readings []data.GroupReading
+		Readings     []data.GroupReading
+		Page         *paginater.Paginater
+		PageQueryRaw string
 	}{
-		Readings: readings,
+		Readings:     output.GroupReadings,
+		Page:         p,
+		PageQueryRaw: qqs,
 	}
 
 	//s.l.Printf("stats: %#v\n", stats)

@@ -1,0 +1,49 @@
+# fly.toml file generated for r2s on 2022-01-21T17:02:37-05:00
+
+app = "r2s"
+
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[env]
+  BIND_ADDRESS = "0.0.0.0:8080"
+  SESSION_KEY = "4666fe1e1f3418b8caa6b3335ca0952f8986f03edb571b1ba4a54518d0f8b75d64"
+  CSRF_KEY = "x8b8830B3b024fbbdaf54dd81c10bzzA12"
+  DB_PATH = "var/db.db"
+  TZ = "America/New_York"
+
+
+[experimental]
+  allowed_public_ports = []
+  auto_rollback = true
+
+[mount]
+  source="r2s_data"
+  destination = "/app/var"
+
+[[services]]
+  http_checks = []
+  internal_port = 8080
+  processes = ["app"]
+  protocol = "tcp"
+  script_checks = []
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.tcp_checks]]
+    grace_period = "1s"
+    interval = "15s"
+    restart_limit = 0
+    timeout = "2s"
