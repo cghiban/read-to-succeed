@@ -13,18 +13,18 @@ Tiny webapp for recording ones read book, articles, etc
 - [x] show groups readings
 - [x] add groups
 - [x] join/leave a group
-- [ ] pagination
 - [x] make use of csrf
 - [x] add midlewares
 - [x] make some users admins (add is_admin column)
 - [x] only admins create groups
-- [ ] groups should have a start and an ending
+- [ ] groups should have a start / ending dates
 - [ ] remember last reader on home
 - [x] make a proper menu (just text)
 - [ ] users may reset password (integrate with mailgun)
-- [ ] fix groups readings (start with a list of groups and let the user choose a group)
-- [ ] pagination
-- [ ] fix user sign up
+- [x] fix groups readings (start with a list of groups and let the user choose a group)
+- [x] pagination for user readings
+- [x] pagination for group readings
+- [x] fix user sign up
 
 database (sqlite):
 

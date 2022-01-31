@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"read2succeed/data"
 	"read2succeed/google_books"
 	"sort"
@@ -63,6 +64,29 @@ func NewService(l *log.Logger, store *data.DataStore, sessionKey *string, resour
 	}
 
 	return &Service{l: l, store: store, t: templates, session: sessStore}
+}
+
+func _buildPaginater(total, itemsPerPage, page int, r *http.Request) (*paginater.Paginater, string) {
+
+	// Arguments:
+	// - Total number of rows
+	// - Number of rows in one page
+	// - Current page number
+	// - Number of page links to be displayed
+	p := paginater.New(total, itemsPerPage, page, 10)
+
+	qq := url.Values{}
+	qqs := r.URL.Path
+	for k := range r.URL.Query() {
+		if k != "page" {
+			qq.Set(k, r.URL.Query().Get(k))
+		}
+	}
+	if len(qqs) > 0 {
+		qqs = qqs + "?" + qq.Encode()
+	}
+
+	return p, qqs
 }
 
 // GetReadings - list user's/users' read books
@@ -121,23 +145,7 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
 
-	// Arguments:
-	// - Total number of rows
-	// - Number of rows in one page
-	// - Current page number
-	// - Number of page links to be displayed
-	p := paginater.New(output.Pagination.Total, itemsPerPage, page, 10)
-
-	qq := url.Values{}
-	qqs := r.URL.Path
-	for k := range r.URL.Query() {
-		if k != "page" {
-			qq.Set(k, r.URL.Query().Get(k))
-		}
-	}
-	if len(qqs) > 0 {
-		qqs = qqs + "?" + qq.Encode()
-	}
+	p, qqs := _buildPaginater(output.Pagination.Total, itemsPerPage, page, r)
 	data := struct {
 		CurrentReader string
 		Page          *paginater.Paginater
@@ -169,33 +177,66 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 func (s *Service) GetGroupReadings(rw http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value("user").(*data.AuthUser)
 
-	group := r.URL.Query().Get("group")
-	if group == "" {
-		group = "0"
-	}
-	group_id, err := strconv.Atoi(group)
-	if err != nil {
-		log.Println(err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
+	tmplData := struct {
+		GroupID      int
+		Readings     []data.GroupReading
+		Page         *paginater.Paginater
+		PageQueryRaw string
+		GroupList    []data.GroupMemberCount
+	}{}
 
-	readings, err := s.store.ListUserGroupsReadings(user.ID, group_id)
-	if err != nil {
-		log.Println(err)
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	groupIDStr := r.URL.Query().Get("group")
+	if groupIDStr == "" {
+		userGroups, err := s.store.GetUserGroupMemberCount(user.ID)
+		if err != nil {
+			log.Println(err)
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		tmplData.GroupList = userGroups
+		//fmt.Printf("tmplData.GroupList: %+v", tmplData.GroupList)
+	} else {
+		groupID, err := strconv.Atoi(groupIDStr)
+		if err != nil {
+			log.Println(err)
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-	data := struct {
-		Readings []data.GroupReading
-	}{
-		Readings: readings,
+		var page int
+		itemsPerPage := 20
+		pageParam := r.URL.Query().Get("page")
+		page, err = strconv.Atoi(pageParam)
+		if err != nil {
+			page = 1
+		}
+
+		offset := (page - 1) * itemsPerPage
+		req := data.GroupReadingsRequest{
+			UserID:  user.ID,
+			GroupID: groupID,
+			Limit:   &itemsPerPage,
+			Offset:  &offset,
+		}
+		output, err := s.store.ListUserGroupsReadings(req)
+		if err != nil {
+			log.Println(err)
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmplData.GroupID = groupID
+		tmplData.Page, tmplData.PageQueryRaw = _buildPaginater(output.Pagination.Total, itemsPerPage, page, r)
+
+		tmplData.Readings = output.GroupReadings
+		//tmplData.Page = p
+		//tmplData.PageQueryRaw = qqs
+
 	}
 
 	//s.l.Printf("stats: %#v\n", stats)
 
-	if err := s.t.ExecuteTemplate(rw, "group_readings.gohtml", data); err != nil {
+	if err := s.t.ExecuteTemplate(rw, "group_readings.gohtml", tmplData); err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
 
@@ -302,6 +343,15 @@ func (s *Service) GetDailyStats(rw http.ResponseWriter, r *http.Request) {
 	//sort.Strings(sortedDays)
 	sort.Sort(sort.Reverse(sort.StringSlice(days)))
 
+	tzStr := os.Getenv("TZ")
+	if tzStr == "" {
+		tzStr = "America/New_York"
+	}
+	tz, err := time.LoadLocation(tzStr)
+	if err != nil {
+		panic(err)
+	}
+
 	data := struct {
 		CurrentReader string
 		Readers       []data.Reader
@@ -312,7 +362,7 @@ func (s *Service) GetDailyStats(rw http.ResponseWriter, r *http.Request) {
 	}{
 		CurrentReader: reader,
 		Readers:       readers,
-		Today:         time.Now().Format("2006-01-02"),
+		Today:         time.Now().In(tz).Format("2006-01-02"),
 		Stats:         stats,
 		DailyStats:    dailyStats,
 		Days:          days,
@@ -553,7 +603,7 @@ func (s *Service) JoinGroup(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("params: %+v\n", params)
+	fmt.Printf("join a group params: %+v\n", params)
 
 	group, err := s.store.GetGroupByID(params.GroupID)
 	if err != nil {

@@ -328,44 +328,76 @@ type GroupReading struct {
 	CreatedOn  time.Time `json:"-"`
 }
 
+type GroupReadingsRequest struct {
+	GroupID int
+	UserID  int
+	Limit   *int
+	Offset  *int
+}
+
+type GroupReadingsResponse struct {
+	GroupReadings []GroupReading
+	Group         Group
+	Pagination    Pagination
+}
+
 // ListUserGroupsReadings - retrieves all records of the given users' group(s)
 // may pass group ID as a filter
-func (ds *DataStore) ListUserGroupsReadings(userID int, args ...int) ([]GroupReading, error) {
-	readings := []GroupReading{}
+func (ds *DataStore) ListUserGroupsReadings(req GroupReadingsRequest) (GroupReadingsResponse, error) {
+	output := GroupReadingsResponse{}
+
+	var limit, offset int
+	if req.Limit != nil && *req.Limit <= 100 {
+		limit = *req.Limit
+	} else {
+		limit = 20
+	}
+
+	if req.Offset != nil {
+		offset = *req.Offset
+	}
+
 	queryFmt := `
-	SELECT g.id, g.name, r.reader, r.reader_id, r.book_author, r.book_title, r.day, r.duration, r.created
-	FROM groups g
-	JOIN group_readers gr ON g.id = gr.group_id
-	JOIN readings r ON gr.reader_id = r.reader_id
-	WHERE g.id IN (
-		-- my readers' groups
-		SELECT group_id
-		FROM group_readers
-		WHERE reader_id IN (
-			SELECT reader_id FROM readers
-			WHERE user_id = ?
-		) %s
-	)
-	ORDER BY r.created DESC
-    `
-	var query string
+		SELECT %s
+		FROM groups g
+		JOIN group_readers gr ON g.id = gr.group_id
+		JOIN readings r ON gr.reader_id = r.reader_id
+		WHERE g.id IN (
+			-- my readers' groups
+			SELECT group_id
+			FROM group_readers
+			WHERE reader_id IN (
+				SELECT reader_id FROM readers
+				WHERE user_id = ?
+			) %s
+		)`
+	queryCols := `g.id, g.name, r.reader, r.reader_id, r.book_author, r.book_title, 
+	r.day, r.duration, r.created`
+
+	var query, where string
 	var rows *sql.Rows
 	var err error
-	if len(args) == 1 && args[0] != 0 {
-		where := " AND group_id = ? "
-		query = fmt.Sprintf(queryFmt, where)
-		rows, err = ds.DB.Query(query, userID, args[0])
+	args := []interface{}{}
+	if req.GroupID != 0 {
+		where = " AND group_id = ? "
+		query = fmt.Sprintf(queryFmt, queryCols, where)
+		args = append(args, req.UserID, req.GroupID)
 	} else {
-		query = fmt.Sprintf(queryFmt, "")
-		rows, err = ds.DB.Query(query, userID)
+		query = fmt.Sprintf(queryFmt, queryCols, where)
+		args = append(args, req.UserID)
 	}
 
-	//fmt.Println(query, args[0])
+	query += fmt.Sprintf(" ORDER BY r.created DESC LIMIT %d OFFSET %d", limit, offset)
+	//fmt.Println(query, req.UserID, req.GroupID)
+
+	rows, err = ds.DB.Query(query, args...)
 
 	if err != nil {
-		return readings, err
+		return output, err
 	}
 	defer rows.Close()
+
+	readings := []GroupReading{}
 	var r GroupReading
 
 	//var day, created, duration string
@@ -393,7 +425,25 @@ func (ds *DataStore) ListUserGroupsReadings(userID int, args ...int) ([]GroupRea
 		readings = append(readings, r)
 	}
 
-	return readings, nil
+	output.GroupReadings = readings
+
+	totalQuery := fmt.Sprintf(queryFmt, "count(*)", where)
+	//ds.L.Println(totalQuery, args)
+
+	row := ds.DB.QueryRow(totalQuery, args...)
+	var total int
+	err = row.Scan(&total)
+	if err != nil {
+		ds.L.Printf("can't query totals: %+v", err)
+		return output, err
+	}
+	output.Pagination = Pagination{
+		Limit:  limit,
+		Offset: offset,
+		Total:  total,
+	}
+
+	return output, nil
 }
 
 type ReaderStat struct {
@@ -747,6 +797,56 @@ func (ds *DataStore) GetUserGroups(userID int) ([]Group, error) {
 			AccessCode: gCode,
 			Status:     gStatus,
 			CreatedOn:  t,
+		})
+	}
+
+	return groups, nil
+}
+
+type GroupMemberCount struct {
+	GroupID     int
+	GroupName   string
+	MemberCount int
+}
+
+// GetUserGroupMemberCount - retrieves user's groups with number of members
+func (ds *DataStore) GetUserGroupMemberCount(userID int) ([]GroupMemberCount, error) {
+	var groups []GroupMemberCount
+
+	query := `SELECT g.id, g.name, count(*) AS cnt
+		FROM groups g
+		JOIN group_readers gr ON g.id = gr.group_id
+		WHERE g.id IN (
+			-- my readers' groups
+			SELECT group_id
+			FROM group_readers
+			WHERE reader_id IN (
+				SELECT reader_id FROM readers
+				WHERE user_id = ?
+			)
+		)
+		GROUP BY g.id, g.name
+		ORDER BY cnt DESC, g.name ASC`
+
+	var rows *sql.Rows
+	var err error
+	rows, err = ds.DB.Query(query, userID)
+
+	if err != nil {
+		return groups, err
+	}
+	defer rows.Close()
+
+	var gName string
+	var gID, gCount int
+
+	for rows.Next() {
+		rows.Scan(&gID, &gName, &gCount)
+
+		groups = append(groups, GroupMemberCount{
+			GroupID:     int(gID),
+			GroupName:   gName,
+			MemberCount: gCount,
 		})
 	}
 

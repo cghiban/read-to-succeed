@@ -13,32 +13,50 @@
     {{ block "menu_burger" .}}{{end}}
 
     <h1>Groups Reading Log</h1>
-<div style="overflow-x:auto;" id="content">
-  <table>
-    <thead>
-    <tr>
-      <th>Group</th>
-      <th>Reader</th>
-      <th>Author</th>
-      <th>Title</th>
-      <th>Day</th>
-      <th>Duration</th>
-    </tr>
-    </thead>
-    <tbody>
-  {{ range .Readings}}
-  <tr>
-      <td><a href="/groupreadings?group={{.GroupID}}">{{.GroupName}}</a></td>
-      <td>{{.ReaderName}}</td>
-      <td>{{.BookAuthor}}</td>
-      <td>{{.BookTitle}}</td>
-      <td>{{dayToDate .Day}}</td>
-      <td>{{.Duration}}m</td>
-  </tr>
-  {{ end }}
-  <tbody>
-  </table>
-</div>
 
+  {{if not .GroupList }}
+    {{ if .Readings }}
+    <div style="overflow-x:auto;" id="content">
+      <table>
+        <thead>
+        <tr>
+          <th>Group</th>
+          <th>Reader</th>
+          <th>Author</th>
+          <th>Title</th>
+          <th>Day</th>
+          <th>Duration</th>
+        </tr>
+        </thead>
+        <tbody>
+      {{ range .Readings}}
+      <tr>
+          <td><a href="/groupreadings?group={{.GroupID}}">{{.GroupName}}</a></td>
+          <td>{{.ReaderName}}</td>
+          <td>{{.BookAuthor}}</td>
+          <td>{{.BookTitle}}</td>
+          <td>{{dayToDate .Day}}</td>
+          <td>{{.Duration}}m</td>
+      </tr>
+      {{ end }}
+      <tbody>
+      </table>
+      {{block "pagination" .}}{{end}}
+    </div>
+    {{else}}
+      {{ if .GroupID }}
+      <p>No activityin this group. Add some readings...</p>
+      {{ else }}
+      <p>Join a group and add some readings...</p>
+      {{ end }}
+    {{end}}
+  {{else}}
+    <p>Pick a group below:</p>
+    <ul>
+    {{ range .GroupList}}
+      <li><a href="/groupreadings?group={{.GroupID}}">{{.GroupName}}</a> ({{.MemberCount}})</li>
+    {{end}}
+    </ul>
+  {{end}}
   </body>
 </html>
