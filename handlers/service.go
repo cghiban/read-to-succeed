@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"read2succeed/data"
 	"read2succeed/google_books"
 	"sort"
@@ -342,6 +343,15 @@ func (s *Service) GetDailyStats(rw http.ResponseWriter, r *http.Request) {
 	//sort.Strings(sortedDays)
 	sort.Sort(sort.Reverse(sort.StringSlice(days)))
 
+	tzStr := os.Getenv("TZ")
+	if tzStr == "" {
+		tzStr = "America/New_York"
+	}
+	tz, err := time.LoadLocation(tzStr)
+	if err != nil {
+		panic(err)
+	}
+
 	data := struct {
 		CurrentReader string
 		Readers       []data.Reader
@@ -352,7 +362,7 @@ func (s *Service) GetDailyStats(rw http.ResponseWriter, r *http.Request) {
 	}{
 		CurrentReader: reader,
 		Readers:       readers,
-		Today:         time.Now().Format("2006-01-02"),
+		Today:         time.Now().In(tz).Format("2006-01-02"),
 		Stats:         stats,
 		DailyStats:    dailyStats,
 		Days:          days,
