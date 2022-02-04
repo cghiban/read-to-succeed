@@ -82,6 +82,7 @@ func main() {
 	postRouter.HandleFunc("/add", r2sservice.AddReading)
 
 	sm.Handle("/groupreadings", web.WrapMiddleware(r2sservice.GetGroupReadings, authMw.UserViaSession, authMw.RequireUser))
+	sm.Handle("/groupreaders/{id:[0-9]+}", web.WrapMiddleware(r2sservice.GetGroupReaders, authMw.UserViaSession, authMw.RequireUser))
 	sm.Handle("/settings", web.WrapMiddleware(r2sservice.Settings, authMw.UserViaSession, authMw.RequireUser))
 	sm.Handle("/addreader", web.WrapMiddleware(r2sservice.AddReader, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
 	sm.Handle("/addgroup", web.WrapMiddleware(r2sservice.AddGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")

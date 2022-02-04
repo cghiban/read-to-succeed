@@ -1,0 +1,6 @@
+var/db*
+db*
+backup*
+ssh*
+vendor/
+*.gz

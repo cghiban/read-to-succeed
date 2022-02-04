@@ -3,6 +3,7 @@ package data
 import (
 	"crypto/sha256"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -50,9 +51,10 @@ type Reading struct {
 
 // Reader - type for handling readers
 type Reader struct {
-	ID     int    `json:"id,omitempty"`
-	UserID int    `json:"user_id,omitempty"`
-	Name   string `json:"name"`
+	ID        int       `json:"id,omitempty"`
+	UserID    int       `json:"user_id,omitempty"`
+	Name      string    `json:"name"`
+	CreatedOn time.Time `json:"-"`
 }
 
 type Readers []Reader
@@ -148,8 +150,11 @@ func (ds *DataStore) GetUser(email string) (*AuthUser, error) {
 	var u AuthUser
 	err := row.Scan(&userID, &u.Name, &u.Email, &u.Pass, &u.IsAdmin, &created)
 	if err != nil {
-		ds.L.Println("nope...")
-		ds.L.Println("****", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			ds.L.Printf("user [%s] not found\n", email)
+		} else {
+			ds.L.Println("****", err)
+		}
 		return nil, err
 	}
 	UserID, _ := strconv.Atoi(userID)
@@ -178,8 +183,11 @@ func (ds *DataStore) GetUserByID(user_id int) (*AuthUser, error) {
 	var u AuthUser
 	err := row.Scan(&userID, &u.Name, &u.Email, &u.Pass, &u.IsAdmin, &created)
 	if err != nil {
-		ds.L.Println("nope...")
-		ds.L.Println("****", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			ds.L.Printf("user %d not found\n", user_id)
+		} else {
+			ds.L.Println("****", err)
+		}
 		return nil, err
 	}
 	UserID, _ := strconv.Atoi(userID)
@@ -576,7 +584,7 @@ func (ds *DataStore) GetUserReaders(userID int) ([]Reader, error) {
 func (ds *DataStore) GetReaderByID(readerID int) (Reader, error) {
 
 	query := `SELECT reader_id, user_id, name FROM readers WHERE reader_id = ?`
-	ds.L.Printf("Query: %s [%d]", query, readerID)
+	//ds.L.Printf("Query: %s [%d]", query, readerID)
 
 	var err error
 	row := ds.DB.QueryRow(query, readerID)
@@ -873,6 +881,41 @@ func (ds *DataStore) GetGroupByID(groupID int) (Group, error) {
 	return g, nil
 }
 
+// GetGroupReaders - retrieves a group's members
+func (ds *DataStore) GetGroupReaders(groupID int) ([]Reader, error) {
+	query := `SELECT r.reader_id, r.user_id, r.name, r.created
+		FROM groups g
+		JOIN group_readers gr ON g.id = gr.group_id
+		JOIN readers r ON gr.reader_id = r.reader_id
+		WHERE g.id = ?`
+
+	var rows *sql.Rows
+	var err error
+	readers := []Reader{}
+	rows, err = ds.DB.Query(query, groupID)
+
+	if err != nil {
+		return readers, err
+	}
+	defer rows.Close()
+
+	var r Reader
+	var created string
+
+	for rows.Next() {
+		err := rows.Scan(&r.ID, &r.UserID, &r.Name, &created)
+		if err != nil {
+			return readers, err
+		}
+		//g.UserID, _ = strconv.Atoi(gUserID)
+		r.CreatedOn, _ = time.Parse("2006-01-02T15:04:05Z07:00", created)
+		//g.ID = groupID
+		readers = append(readers, r)
+	}
+
+	return readers, nil
+}
+
 // FindNewGroupsForReader - find groups base on a query
 func (ds *DataStore) FindNewGroupsForReader(q string, readerID int) ([]Group, error) {
 
@@ -896,6 +939,7 @@ func (ds *DataStore) FindNewGroupsForReader(q string, readerID int) ([]Group, er
 	if err != nil {
 		return []Group{}, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		err = rows.Scan(&g.ID, &g.Name, &g.Status)

@@ -87,7 +87,7 @@
         {{ range .UserGroups}}
           <tr class="g{{.Status}}">
             <td>{{.ID}}</td>
-            <td>{{.Name}}</td>
+            <td><a href="/groupreaders/{{.ID}}">{{.Name}}</a></td>
             <td>{{.AccessCode}}</td>
             <td>{{if eq .Status "public" -}}
                 <input type="checkbox" value="{{.ID}}" checked>
