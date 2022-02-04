@@ -3,6 +3,7 @@ package data
 import (
 	"crypto/sha256"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -149,8 +150,11 @@ func (ds *DataStore) GetUser(email string) (*AuthUser, error) {
 	var u AuthUser
 	err := row.Scan(&userID, &u.Name, &u.Email, &u.Pass, &u.IsAdmin, &created)
 	if err != nil {
-		ds.L.Println("nope...")
-		ds.L.Println("****", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			ds.L.Printf("user [%s] not found\n", email)
+		} else {
+			ds.L.Println("****", err)
+		}
 		return nil, err
 	}
 	UserID, _ := strconv.Atoi(userID)
@@ -179,8 +183,11 @@ func (ds *DataStore) GetUserByID(user_id int) (*AuthUser, error) {
 	var u AuthUser
 	err := row.Scan(&userID, &u.Name, &u.Email, &u.Pass, &u.IsAdmin, &created)
 	if err != nil {
-		ds.L.Println("nope...")
-		ds.L.Println("****", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			ds.L.Printf("user %d not found\n", user_id)
+		} else {
+			ds.L.Println("****", err)
+		}
 		return nil, err
 	}
 	UserID, _ := strconv.Atoi(userID)
