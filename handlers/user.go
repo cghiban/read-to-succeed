@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"read2succeed/data"
 	"strings"
@@ -9,7 +8,7 @@ import (
 	"github.com/gorilla/csrf"
 )
 
-//IsLoggedIn will check if the user has an active session and return True
+// IsLoggedIn will check if the user has an active session and return True
 func (s *Service) IsLoggedIn(r *http.Request) bool {
 	session, err := s.session.Get(r, "session")
 	if err != nil {
@@ -25,14 +24,15 @@ func (s *Service) IsLoggedIn(r *http.Request) bool {
 // UserSignUp - handles user signup
 func (s *Service) UserSignUp(rw http.ResponseWriter, r *http.Request) {
 
-	formData := map[string]interface{}{
+	formData := map[string]any{
 		csrf.TemplateTag: csrf.TemplateField(r),
 	}
-	if r.Method == "GET" {
+	switch r.Method {
+	case http.MethodGet:
 		if err := s.t.ExecuteTemplate(rw, "register.gohtml", formData); err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
-	} else if r.Method == "POST" {
+	case http.MethodPost:
 		r.ParseForm()
 
 		name := strings.Trim(r.Form.Get("name"), " ")
@@ -71,12 +71,12 @@ func (s *Service) UserSignUp(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 
-	formData := map[string]interface{}{
+	formData := map[string]any{
 		csrf.TemplateTag: csrf.TemplateField(r),
 	}
 
-	if r.Method == "GET" {
-
+	switch r.Method {
+	case http.MethodGet:
 		session, err := s.session.Get(r, "session")
 		if err == nil {
 			msgs := session.Flashes()
@@ -90,8 +90,7 @@ func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 		if err := s.t.ExecuteTemplate(rw, "login.gohtml", formData); err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
-	} else if r.Method == "POST" {
-
+	case http.MethodPost:
 		if err := r.ParseForm(); err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 			return
@@ -109,8 +108,6 @@ func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 				http.Error(rw, err.Error(), http.StatusInternalServerError)
 				return
 			}
-
-			//s.l.Printf("user checked OK: %v", user)
 
 			session.Values["logged_in"] = true
 			session.Values["user_id"] = user.ID
@@ -133,6 +130,9 @@ func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 		if err := s.t.ExecuteTemplate(rw, "login.gohtml", formData); err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
+	default:
+		http.Error(rw, "bad request", http.StatusBadRequest)
+		return
 	}
 }
 
@@ -154,65 +154,4 @@ func (s *Service) UserLogOut(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(rw, r, "/", http.StatusFound)
-}
-
-// UserAuth provides middleware functions for authorizing users and setting the user
-// in the request context.
-type Auth struct {
-	Service *Service
-}
-
-// UserViaSession will retrieve the current user set by the session cookie
-// and set it in the request context. UserViaSession will NOT redirect
-// to the sign in page if the user is not found. That is left for the
-// RequireUser method to handle so that some pages can optionally have
-// access to the current user.
-func (a *Auth) UserViaSession(next http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		session, err := a.Service.session.Get(r, "session")
-		if err != nil {
-			next.ServeHTTP(w, r)
-			return
-		}
-		//a.Service.l.Printf("logged_in: %v\t%T", session.Values["logged_in"], session.Values["logged_in"])
-		if session.Values["logged_in"] != true {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		user_id, _ := session.Values["user_id"].(int)
-		user, err := a.Service.store.GetUserByID(user_id)
-		if err != nil {
-			// If you want you can retain the original functionality to call
-			// http.Error if any error aside from app.ErrNotFound is returned,
-			// but I find that most of the time we can continue on and let later
-			// code error if it requires a user, otherwise it can continue without
-			// the user.
-			next.ServeHTTP(w, r)
-			return
-		}
-		r = r.WithContext(context.WithValue(r.Context(), "user", user))
-		next.ServeHTTP(w, r)
-	}
-}
-
-// RequireUser will verify that a user is set in the request context. It if is
-// set correctly, the next handler will be called, otherwise it will redirect
-// the user to the sign in page and the next handler will not be called.
-func (a *Auth) RequireUser(next http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		tmp := r.Context().Value("user")
-		if tmp == nil {
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-		if _, ok := tmp.(*data.AuthUser); !ok {
-			// Whatever was set in the user key isn't a user, so we probably need to
-			// sign in.
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-		next.ServeHTTP(w, r)
-	}
 }

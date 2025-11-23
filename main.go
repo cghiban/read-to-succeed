@@ -64,10 +64,9 @@ func init() {
 }
 
 func main() {
-	l := log.New(os.Stdout, "reading 2 succees", log.LstdFlags)
-	l.Println("about to start server on ", *bindAddress)
+	slog := log.New(os.Stdout, "reading 2 succees", log.LstdFlags)
 
-	r2sservice := handlers.NewService(l, dataStore, sessionKey, resources)
+	r2sservice := handlers.NewService(slog, dataStore, sessionKey, resources)
 
 	// auth midleware...
 	authMw := handlers.Auth{
@@ -98,12 +97,9 @@ func main() {
 	sm.HandleFunc("/add_book", r2sservice.AddBook)
 	sm.HandleFunc("/library", r2sservice.Library)
 
-	//sm.HandleFunc("/register", r2sservice.UserSignUp)
-
-	// make sure we set Secure to true for production
-	csrfMiddleware := csrf.Protect([]byte(*csrfKey), csrf.Secure(false))
+	csrf := CsrfMiddleware([]byte(*csrfKey))
 	userRouter := sm.Methods("POST", "GET").Subrouter()
-	userRouter.Use(csrfMiddleware)
+	userRouter.Use(csrf)
 	userRouter.HandleFunc("/register", r2sservice.UserSignUp)
 	userRouter.HandleFunc("/login", r2sservice.UserLogIn)
 	userRouter.HandleFunc("/logout", r2sservice.UserLogOut)
@@ -112,7 +108,7 @@ func main() {
 
 	staticFS, err := fs.Sub(resources, "var/static")
 	if err != nil {
-		l.Fatalln(err)
+		slog.Fatalln(err)
 	}
 
 	sm.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
@@ -127,9 +123,10 @@ func main() {
 	}
 
 	go func() {
-		err := s.ListenAndServe()
+		slog.Printf("Starting webserver on %s\n", *bindAddress)
+		err = s.ListenAndServe()
 		if err != nil {
-			l.Fatalln(err)
+			slog.Fatalln(err)
 		}
 	}()
 
@@ -137,7 +134,28 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	sig := <-sigChan
-	l.Println("Received terminate, graceful shutdown", sig)
+	slog.Println("Received terminate, graceful shutdown", sig)
 	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 	s.Shutdown(ctx)
+}
+
+func CsrfMiddleware(key []byte) func(http.Handler) http.Handler {
+	var opts []csrf.Option
+	env := os.Getenv("APP_ENV")
+	if env == "local" || env == "dev" {
+		opts = append(opts, csrf.Secure(false))
+	}
+	csrfFn := csrf.Protect(key, opts...)
+
+	return func(next http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			// Need this starting from gorilla/csrf 1.7.3.
+			if env == "local" || env == "dev" {
+				r = csrf.PlaintextHTTPRequest(r)
+			}
+			csrfFn(next).ServeHTTP(w, r)
+		}
+
+		return http.HandlerFunc(fn)
+	}
 }
