@@ -225,16 +225,6 @@ func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 		rw.Write([]byte("{\"status\":\"ok\"}"))
 		return
 	}
-
-	err := r.ParseMultipartForm(1_000)
-	if r.Method != http.MethodPost {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	data := r.PostForm
-	log.Printf("form data: %#v", data)
-	rw.Write([]byte("[1,2,3]"))
 }
 
 // GetDailyStats - list user's/users' read books
@@ -406,15 +396,13 @@ func (s *Service) SearchGoogleBooks(rw http.ResponseWriter, r *http.Request) {
 	uri := r.URL.Path
 	log.Println("path:", uri)
 
-	//vars := mux.Vars(r)
-	//log.Println("vars:", vars)
 	log.Println("query:", r.URL.Query())
 	query := r.URL.Query().Get("q")
-	log.Printf("q: [%s]", query)
+	lang := r.URL.Query().Get("lang")
 
 	// https://developers.google.com/books/docs/v1/using
 
-	result := google_books.DoSearch(query)
+	result := google_books.DoSearch(query, lang)
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.Header().Set("Cache-Control", "no-cache")
@@ -439,7 +427,6 @@ func (s *Service) Library(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := session.Values["user_id"].(int)
-
 	books, err := s.store.QueryBookByUserID(userID)
 	if err != nil {
 		log.Println(err)

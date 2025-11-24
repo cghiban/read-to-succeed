@@ -86,6 +86,12 @@ li .snippet {
         <h3>Search Book</h3>
 
         <div>
+          <select id="lang" name="lang">
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="ro">Romanian</option>
+          </select>
           <input class="searchbox" type="text" id="q" name="q">
           <span id="search-icon" class="material-icons">stop_circle</span>
         </div>
@@ -121,13 +127,14 @@ window.addEventListener("load", (ev) => {
   let modal = document.querySelector("#myModal"),
     add_manually_link = document.querySelector("#add-manually-link"),
     add_manually_form = document.querySelector("#add-manually-form");
-  
+
   add_manually_link.addEventListener('click', (ev) => {
     add_manually_form.style.display = "block";
     add_manually_link.style.display = "none";
   });
   document.querySelector("#addbook").addEventListener('click', (ev) => {
     modal.style.display = "block";
+    document.querySelector('#q').focus();
   });
   document.querySelector("#hide-form").addEventListener('click', (ev) => {
     add_manually_form.style.display = "none";
@@ -140,17 +147,17 @@ window.addEventListener("load", (ev) => {
 		last_query = '';
 
 	let doSearch = function(endpoint, params) {
-    console.info("doing the search...", params);
-    results_div.childNodes.forEach(e => e.remove());
+	    console.info("doing the search...", params);
+        results_div.childNodes.forEach(e => e.remove());
 		if (params["q"].length < 3) {
 			return;
 		}
-    
+
 		last_query = params["q"];
-		console.info("/search_books?q=" + encodeURI(params["q"]));
+		console.info("/search_books?q=" + encodeURI(params["q"]) + "&lang=" + params["lang"]);
 		search_icon.classList.add('blink');
 
-		fetch("/search_books?q=" + encodeURI(params["q"]))
+		fetch("/search_books?q=" + encodeURI(params["q"]) + "&lang=" + params["lang"])
 			.then(response => response.json())
 			.then(data => {
 				console.log(data);
@@ -193,15 +200,15 @@ window.addEventListener("load", (ev) => {
 		data.forEach(item => {
 			let info = item["volumeInfo"];
 			console.log("\t-", item["id"], "-", info["title"], "~~", info["authors"]);
-      console.log("\t-", item["id"], " ", item["description"], " ----- ", item["searchInfo"]["textSnippet"]);
+            console.log("\t-", item["id"], " ", item["description"], " ----- ", item["searchInfo"]["textSnippet"]);
 			let li = document.createElement("li");
 			const newContent = document.createTextNode(
 				(info["authors"] ? info["authors"].join(", ") : "") + " - " + info["title"]
 			);
 			let div_title = document.createElement("div");
 			div_title.appendChild(newContent);
-			
-      let imgUrl = info["imageLinks"]["smallThumbnail"];
+
+            let imgUrl = info["imageLinks"]["smallThumbnail"];
 			if (info["imageLinks"]) {
 				imgUrl = imgUrl ? imgUrl : info["imageLinks"]["thumbnail"];
 				if (imgUrl) {
@@ -213,25 +220,27 @@ window.addEventListener("load", (ev) => {
 			li.appendChild(div_title);
 			ul.appendChild(li);
 
-      let isbn = "";
-      try {
-        info["industryIdentifiers"].forEach(ii => {
-          if (ii["type"] === "ISBN_13") {
-            isbn = ii["identifier"];
-            return;
-          }
-        });
-      } catch(e) {
-        console.log(e);
-      };
-			const description = document.createTextNode(item["description"] || item["searchInfo"]["textSnippet"]),
-				div_description = document.createElement("div");
-			//div_desc.
-			div_description.className = "snippet";
-			div_description.appendChild(description);
-			li.appendChild(div_description);
-			//li.title = info["description"];
-			
+            let isbn = "";
+            try {
+              info["industryIdentifiers"].forEach(ii => {
+                if (ii["type"] === "ISBN_13") {
+                  isbn = ii["identifier"];
+                  return;
+                }
+              });
+            } catch(e) {
+              console.log(e);
+            };
+           	//const description = document.createTextNode(item["description"] || item["searchInfo"]["textSnippet"]),
+            const description = item["description"] || item["searchInfo"]["textSnippet"],
+            		div_description = document.createElement("div");
+
+         	div_description.className = "snippet";
+            div_description.innerHTML = description;
+         	//div_description.appendChild(description);
+         	li.appendChild(div_description);
+         	//li.title = info["description"];
+
       let add_link = document.createElement("a");
       add_link.appendChild(document.createTextNode("add book"));
       add_link.href="#";
@@ -244,9 +253,11 @@ window.addEventListener("load", (ev) => {
           isbn: isbn,
           thumb_url: imgUrl
         };
+
         console.log(data);
         console.log(JSON.stringify(data));
         console.log(e.target.style);
+
         postData("/add_book", data)
           .then(data => {
             console.log(data); // JSON data parsed by `data.json()` call)
@@ -291,7 +302,8 @@ window.addEventListener("load", (ev) => {
 			return;
 		}
 		const params = {
-			q: ev.target.value
+			q: ev.target.value,
+			lang: document.querySelector('#lang').value
 		};
 		if (params["q"] === last_query) {
 			return;

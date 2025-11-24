@@ -1,6 +1,6 @@
 module read2succeed
 
-go 1.24
+go 1.25
 
 require (
 	github.com/google/go-cmp v0.7.0
@@ -12,8 +12,4 @@ require (
 	github.com/unknwon/paginater v0.0.0-20200328080006-042474bd0eae
 )
 
-require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/gorilla/securecookie v1.1.2 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-)
+require github.com/gorilla/securecookie v1.1.2 // indirect

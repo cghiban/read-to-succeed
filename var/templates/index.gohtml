@@ -11,7 +11,7 @@
   {{ block "menu_burger" .}}{{end}}
 
   <h1>Reading Log</h1>
-  
+
   <div class="sub-nav">
       <select id="readers">
   {{- $cr := .CurrentReader -}}
@@ -42,8 +42,9 @@
       <th>Author</th>
       <th>Title</th>
       <th>Note</th>
-      <th>Day</th>
       <th>Duration</th>
+      <th>Pages</th>
+      <th>Day</th>
       <th>Added on</th>
     </tr>
     </thead>
@@ -58,8 +59,9 @@
         </a>
       </td>
       <td>{{.Note}}</td>
-      <td>{{dayToDate .Day}}</td>
       <td>{{.Duration}}m</td>
+      <td>{{.Pages}}</td>
+      <td>{{dayToDate .Day}}</td>
       <td>{{dateISOish .CreatedOn}}</td>
   </tr>
   {{ end }}
@@ -99,14 +101,18 @@
           </div>
           <div>
             <label>Duration</label>
-            <input type="number" min="1" max="90" name="duration" required> <small>(minutes)<small>
+            <input type="number" min="0" max="90" name="duration"> <small>(minutes)</small>
+          </div>
+          <div>
+            <label>Pages</label>
+            <input type="number" min="0" max="100" name="pages">
           </div>
           <div>
             <a href="#" id="show_note_box" onclick='document.querySelector("#notecontainer").style.display="block";this.parentNode.style.display="none";'>add a note</a>
           </div>
           <div id="notecontainer" style="display:none;">
-            <label>Note</label>
-            <input type="text" name="note">
+            <label style="vertical-align: top;">Note</label>
+            <textarea name="note"></textarea>
           </div>
           <div>
             <label></label>

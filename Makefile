@@ -2,9 +2,8 @@
 default: build
 
 build:
-	#CGO_ENABLED=1 GOOS=linux go build -ldflags "-s -w" -o read2succeed
-	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/local/bin/x86_64-linux-musl-cc \
-				go build -v -a -ldflags '-linkmode external -extldflags "-static"' -o read2succeed
+	CC=x86_64-linux-musl-gcc CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+		go build -trimpath -ldflags "-extldflags -static" -o read2succeed
 
 docker:
 	docker build --no-cache -t r2s:latest -f Dockerfile .
@@ -19,6 +18,3 @@ run-container:
 		-p 8080:8080 \
 		-v ${PWD}/var/:/app/var/:rw \
 		--name r2s-docker r2s:latest
-
-
-

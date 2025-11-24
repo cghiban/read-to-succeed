@@ -45,6 +45,7 @@ type Reading struct {
 	BookTitle  string    `json:"title"`
 	Day        string    `json:"day"`
 	Duration   int       `json:"duration"`
+	Pages      int       `json:"pages"`
 	Note       string    `json:"note"`
 	CreatedOn  time.Time `json:"-"`
 }
@@ -83,7 +84,7 @@ type GroupReaders struct {
 	ReaderName string
 }
 
-//DataStore - db operations
+// DataStore - db operations
 type DataStore struct {
 	DB *sql.DB
 	L  *log.Logger
@@ -208,8 +209,8 @@ func (ds *DataStore) AddReading(r *Reading) error {
 	//fmt.Printf("found reader: %+v", reader)
 
 	query := `
-        INSERT INTO readings (user_id, reader, reader_id, book_author, book_title, day, duration, note, created)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
+        INSERT INTO readings (user_id, reader, reader_id, book_author, book_title, day, duration, pages, note, created)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
     `
 
 	stmt, err := ds.DB.Prepare(query)
@@ -218,7 +219,7 @@ func (ds *DataStore) AddReading(r *Reading) error {
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(r.UserID, r.ReaderName, reader.ID, r.BookAuthor, r.BookTitle, r.Day, r.Duration, r.Note)
+	res, err := stmt.Exec(r.UserID, r.ReaderName, reader.ID, r.BookAuthor, r.BookTitle, r.Day, r.Duration, r.Pages, r.Note)
 	if err != nil {
 		return err
 	}
@@ -257,12 +258,12 @@ func (ds *DataStore) ListUserReadings(req UserReadingsRequest) (UserReadingsResp
 	output := UserReadingsResponse{}
 
 	queryFmt := `
-        SELECT id, reader, book_author, book_title, day, duration, note, created
+        SELECT id, reader, book_author, book_title, day, duration, pages, note, created
         FROM readings WHERE user_id = ? %s`
 	var query, where string
 	var rows *sql.Rows
 	var err error
-	var args []interface{}
+	var args []any
 	if req.Reader != "" {
 		where = " AND reader = ? "
 		query = fmt.Sprintf(queryFmt, where)
@@ -295,7 +296,7 @@ func (ds *DataStore) ListUserReadings(req UserReadingsRequest) (UserReadingsResp
 	var r Reading
 	var created string
 	for rows.Next() {
-		rows.Scan(&r.ID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &r.Day, &r.Duration, &r.Note, &created)
+		rows.Scan(&r.ID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &r.Day, &r.Duration, &r.Pages, &r.Note, &created)
 		t, _ := time.Parse("2006-01-02T15:04:05Z", created)
 		r.CreatedOn = t
 		readings = append(readings, r)
@@ -333,6 +334,7 @@ type GroupReading struct {
 	BookTitle  string    `json:"title"`
 	Day        string    `json:"day"`
 	Duration   int       `json:"duration"`
+	Pages      int       `json:"pages"`
 	CreatedOn  time.Time `json:"-"`
 }
 
@@ -379,13 +381,13 @@ func (ds *DataStore) ListUserGroupsReadings(req GroupReadingsRequest) (GroupRead
 				WHERE user_id = ?
 			) %s
 		)`
-	queryCols := `g.id, g.name, r.reader, r.reader_id, r.book_author, r.book_title, 
-	r.day, r.duration, r.created`
+	queryCols := `g.id, g.name, r.reader, r.reader_id, r.book_author, r.book_title,
+	r.day, r.duration, r.pages, r.created`
 
 	var query, where string
 	var rows *sql.Rows
 	var err error
-	args := []interface{}{}
+	args := []any{}
 	if req.GroupID != 0 {
 		where = " AND group_id = ? "
 		query = fmt.Sprintf(queryFmt, queryCols, where)
@@ -420,6 +422,7 @@ func (ds *DataStore) ListUserGroupsReadings(req GroupReadingsRequest) (GroupRead
 			&r.BookTitle,
 			&r.Day,
 			&r.Duration,
+			&r.Pages,
 			&created)
 
 		//ds.l.Println(day, duration, created)
@@ -461,25 +464,27 @@ type ReaderStat struct {
 	Values     []int
 }
 
-//TotalReadingStat - ....
+// TotalReadingStat - ....
 type TotalReadingStat struct {
 	ReaderName    string
 	TotalDuration int
+	TotalPages    int
 }
 
 type DailyReaderStat struct {
-	ReaderName string
-	Label      string
-	Value      int
+	ReaderName    string
+	Label         string
+	TotalDuration int
+	TotalPages    int
 }
 
-//DailyReadingStats
+// DailyReadingStats
 type DailyReadingStats map[string][]DailyReaderStat
 
 // GetStatsTotals - retrieves all records or of the given reader passed as args
 func (ds *DataStore) GetStatsTotals(userID int) ([]TotalReadingStat, error) {
 	totals := []TotalReadingStat{}
-	query := `SELECT sum(duration) AS total, reader
+	query := `SELECT sum(duration) AS total, sum(pages) AS pages, reader
 		FROM readings
 		WHERE user_id = ?
 		GROUP BY reader
@@ -497,7 +502,7 @@ func (ds *DataStore) GetStatsTotals(userID int) ([]TotalReadingStat, error) {
 
 	//var created string
 	for rows.Next() {
-		rows.Scan(&stat.TotalDuration, &stat.ReaderName)
+		rows.Scan(&stat.TotalDuration, &stat.TotalPages, &stat.ReaderName)
 		totals = append(totals, stat)
 	}
 
@@ -515,14 +520,15 @@ func (ds *DataStore) GetStatsDaily(userID int) (DailyReadingStats, error) {
         SELECT DATE(date, '+1 day')
         FROM last31days
         WHERE date <= date('now')
-        ), reader_readings(day, reader, duration) AS (
-            SELECT DATE(day) as day, reader, sum(duration)
+        ), reader_readings(day, reader, duration, pages) AS (
+            SELECT DATE(day), reader, SUM(duration), SUM(pages)
             FROM readings
             WHERE DATE('now', '-31 day', 'localtime') < DATE(day) AND user_id = ?
             GROUP BY day, reader
         )
         SELECT date, CASE WHEN reader IS NULL THEN '-' ELSE reader END AS reader,
-            CASE WHEN duration IS NULL THEN 0 ELSE duration END AS daily_duration
+            CASE WHEN duration IS NULL THEN 0 ELSE duration END AS daily_duration,
+            CASE WHEN pages IS NULL THEN 0 ELSE pages END AS daily_pages
         FROM last31days LEFT JOIN reader_readings ON date = day
         WHERE date <= CURRENT_DATE`
 
@@ -540,7 +546,7 @@ func (ds *DataStore) GetStatsDaily(userID int) (DailyReadingStats, error) {
 
 	var entry DailyReaderStat
 	for rows.Next() {
-		rows.Scan(&entry.Label, &entry.ReaderName, &entry.Value)
+		rows.Scan(&entry.Label, &entry.ReaderName, &entry.TotalDuration, &entry.TotalPages)
 		if _, ok := dailyStats[entry.Label]; !ok {
 			dailyStats[entry.Label] = []DailyReaderStat{entry}
 		} else {
@@ -924,9 +930,9 @@ func (ds *DataStore) FindNewGroupsForReader(q string, readerID int) ([]Group, er
 		SELECT group_id FROM group_readers WHERE reader_id = ?
 	)
 	SELECT g.id, g.name, g.status
-	FROM groups g 
-	LEFT JOIN readers_groups rg ON g.id = rg.group_id 
-	WHERE rg.group_ID IS NULL 
+	FROM groups g
+	LEFT JOIN readers_groups rg ON g.id = rg.group_id
+	WHERE rg.group_ID IS NULL
 		AND ((status='public' AND name LIKE '%'|| ? ||'%') OR code = ?)`
 	//fmt.Printf("%s [%s, %s]\n", query, fmt.Sprintf("%%%s%%", q), q)
 

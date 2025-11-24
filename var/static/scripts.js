@@ -1,119 +1,119 @@
-
 let modal = document.querySelector("#myModal"),
-    span = document.querySelector('.close'),
-    stats = document.querySelector('#stats'),
-    readers = document.querySelector('#readers'),
-    reader = document.querySelector('select[name=reader]'),
-    author = document.querySelector('input[name=author]'),
-    title = document.querySelector('input[name=title]'),
-    day = document.querySelector('input[name=day]'),
-    duration = document.querySelector('input[name=duration]');
+  span = document.querySelector(".close"),
+  stats = document.querySelector("#stats"),
+  readers = document.querySelector("#readers"),
+  reader = document.querySelector("select[name=reader]"),
+  author = document.querySelector("input[name=author]"),
+  title = document.querySelector("input[name=title]"),
+  day = document.querySelector("input[name=day]"),
+  duration = document.querySelector("input[name=duration]");
+pages = document.querySelector("input[name=pages]");
 
 if (stats) {
-    stats.hidden = true;
+  stats.hidden = true;
 }
 
 let addButtons = document.querySelectorAll(".addentry, #addentry");
-addButtons.forEach(b => {
-    console.log(b);
-    b.addEventListener('click', (ev) => {
-        if (b.getAttribute("data__reader")) {
-            reader.value = b.getAttribute("data__reader");
-        } else {
-            reader.value = readers.value;
-        }
-        if (b.getAttribute("data__author")) {
-            author.value = b.getAttribute("data__author");
-        } else {
-            author.value = "";
-        }
-        if (b.getAttribute("data__title")) {
-            title.value = b.getAttribute("data__title");
-        } else {
-            title.value = "";
-        }
-        modal.style.display = "block";
-    });
+addButtons.forEach((b) => {
+  b.addEventListener("click", (ev) => {
+    if (b.getAttribute("data__reader")) {
+      reader.value = b.getAttribute("data__reader");
+    } else {
+      reader.value = readers.value;
+    }
+    if (b.getAttribute("data__author")) {
+      author.value = b.getAttribute("data__author");
+    } else {
+      author.value = "";
+    }
+    if (b.getAttribute("data__title")) {
+      title.value = b.getAttribute("data__title");
+    } else {
+      title.value = "";
+    }
+    modal.style.display = "block";
+  });
 });
 
-if (document.querySelector('#togglestats')) {
-    document.querySelector('#togglestats').addEventListener('click', (ev) => {
-        stats.hidden = !stats.hidden;
-    });
+if (document.querySelector("#togglestats")) {
+  document.querySelector("#togglestats").addEventListener("click", (ev) => {
+    stats.hidden = !stats.hidden;
+  });
 }
 
 if (readers) {
-    readers.addEventListener("change", (ev) => {
-        let v = ev.target.value;
-        if (v === "") {
-            document.location.href = "/";
-        }
-        else {
-            document.location.href = "/?reader=" + v;
-        }
-    });
+  readers.addEventListener("change", (ev) => {
+    let v = ev.target.value;
+    if (v === "") {
+      document.location.href = "/";
+    } else {
+      document.location.href = "/?reader=" + v;
+    }
+  });
 }
 
-document.querySelector('form#addreading button').addEventListener('click', (ev) => {
-    let form = document.querySelector('form#addreading'),
-    formData = new FormData(form);
-    console.log('valid: ', form.checkValidity());
-    if (!form.checkValidity())
-        return;
+document.querySelector("form#addreading button").addEventListener(
+  "click",
+  (ev) => {
+    let form = document.querySelector("form#addreading"),
+      formData = new FormData(form);
+    console.log("valid: ", form.checkValidity());
+    if (!form.checkValidity()) return;
 
-    async function postData(url = '', data = {}) {
-        // Default options are marked with *
-        const response = await fetch(url, {
-            method: 'POST', // *GET, POST, PUT, DELETE, etc.
-            mode: 'cors', // no-cors, *cors, same-origin
-            cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-            credentials: 'same-origin', // include, *same-origin, omit
-            headers: {
-            'Content-Type': 'application/json'
-            // 'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            redirect: 'follow', // manual, *follow, error
-            referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-            body: JSON.stringify(data) // body data type must match "Content-Type" header
-        });
-        return response.json(); // parses JSON response into native JavaScript objects
-    };
+    async function postData(url = "", data = {}) {
+      // Default options are marked with *
+      const response = await fetch(url, {
+        method: "POST", // *GET, POST, PUT, DELETE, etc.
+        mode: "cors", // no-cors, *cors, same-origin
+        cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
+        credentials: "same-origin", // include, *same-origin, omit
+        headers: {
+          "Content-Type": "application/json",
+        },
+        redirect: "follow", // manual, *follow, error
+        referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+        body: JSON.stringify(data), // body data type must match "Content-Type" header
+      });
+      return response.json(); // parses JSON response into native JavaScript objects
+    }
     let data = {
-        reader: formData.get("reader").trim(),
-        author: formData.get("author").trim(),
-        title: formData.get("title").trim(),
-        note: formData.get("note").trim(),
-        day: formData.get("day"),
-        duration: parseInt(formData.get("duration"),10),
+      reader: formData.get("reader").trim(),
+      author: formData.get("author").trim(),
+      title: formData.get("title").trim(),
+      note: formData.get("note").trim(),
+      day: formData.get("day"),
+      duration: parseInt(formData.get("duration"), 10),
+      pages: parseInt(formData.get("pages"), 10),
     };
     console.log(data);
-    postData('/add', data)
-    .then(data => {
-        console.log(data); // JSON data parsed by `data.json()` call
-        if (data && data.status === "ok") {
-            document.location.href = "/?reader=" + formData.get("reader");
-        }
+    postData("/add", data).then((data) => {
+      console.log(data); // JSON data parsed by `data.json()` call
+      if (data && data.status === "ok") {
+        document.location.href = "/?reader=" + formData.get("reader");
+      }
     });
 
     ev.preventDefault();
-}, false);
+  },
+  false,
+);
 
 if (modal) {
-    // When the user clicks on <span> (x), close the modal
-    span.onclick = function() {
-        modal.style.display = "none";
-    }
+  // When the user clicks on <span> (x), close the modal
+  span.onclick = function () {
+    modal.style.display = "none";
+  };
 
-    // When the user clicks anywhere outside of the modal, close it
-    window.onclick = function(event) {
-        if (event.target == modal) {
-            modal.style.display = "none";
-        }
+  // When the user clicks anywhere outside of the modal, close it
+  window.onclick = function (event) {
+    if (event.target == modal) {
+      modal.style.display = "none";
     }
+  };
 
-    document.body.addEventListener('keyup', function(e) {
-        if (e.key == "Escape") {
-            modal.style.display = "none";
-        }
-    });
+  document.body.addEventListener("keyup", function (e) {
+    if (e.key == "Escape") {
+      modal.style.display = "none";
+    }
+  });
 }

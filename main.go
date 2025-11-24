@@ -78,11 +78,12 @@ func main() {
 	getRouter.HandleFunc("/", r2sservice.GetReadings)
 
 	postRouter := sm.Methods("POST").Subrouter()
-	postRouter.HandleFunc("/add", r2sservice.AddReading)
+	postRouter.Handle("/add", web.WrapMiddleware(r2sservice.AddReading, authMw.UserViaSession, authMw.RequireUser))
 
 	sm.Handle("/groupreadings", web.WrapMiddleware(r2sservice.GetGroupReadings, authMw.UserViaSession, authMw.RequireUser))
 	sm.Handle("/groupreaders/{id:[0-9]+}", web.WrapMiddleware(r2sservice.GetGroupReaders, authMw.UserViaSession, authMw.RequireUser))
 	sm.Handle("/settings", web.WrapMiddleware(r2sservice.Settings, authMw.UserViaSession, authMw.RequireUser))
+
 	sm.Handle("/addreader", web.WrapMiddleware(r2sservice.AddReader, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
 	sm.Handle("/addgroup", web.WrapMiddleware(r2sservice.AddGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
 	sm.Handle("/updategroup/{id:[0-9]+}", web.WrapMiddleware(r2sservice.UpdateGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST").HeadersRegexp("Content-Type", "application/json")
@@ -90,13 +91,18 @@ func main() {
 	sm.Handle("/joingroup", web.WrapMiddleware(r2sservice.JoinGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
 	sm.Handle("/leavegroup", web.WrapMiddleware(r2sservice.LeaveGroup, authMw.UserViaSession, authMw.RequireUser)).Methods("POST")
 
-	sm.HandleFunc("/dailystats", r2sservice.GetDailyStats)
+	sm.Handle("/dailystats", web.WrapMiddleware(r2sservice.GetDailyStats, authMw.UserViaSession, authMw.RequireUser))
 	sm.HandleFunc("/about", r2sservice.About)
 
-	sm.HandleFunc("/search_books", r2sservice.SearchGoogleBooks)
-	sm.HandleFunc("/add_book", r2sservice.AddBook)
-	sm.HandleFunc("/library", r2sservice.Library)
-
+	env := os.Getenv("APP_ENV")
+	if env == "local" || env == "dev" {
+		sm.HandleFunc("/search_books", r2sservice.SearchGoogleBooks)
+		sm.HandleFunc("/add_book", r2sservice.AddBook)
+		sm.HandleFunc("/library", r2sservice.Library)
+	}
+	// https://www.alexedwards.net/blog/preventing-csrf-in-go
+	// http.CrossOriginProtection
+	// it need go1.25
 	csrf := CsrfMiddleware([]byte(*csrfKey))
 	userRouter := sm.Methods("POST", "GET").Subrouter()
 	userRouter.Use(csrf)
@@ -159,3 +165,16 @@ func CsrfMiddleware(key []byte) func(http.Handler) http.Handler {
 		return http.HandlerFunc(fn)
 	}
 }
+
+// func preventCSRF(next http.Handler) http.Handler {
+// 	cop := http.NewCrossOriginProtection()
+
+// 	cop.AddTrustedOrigin("https://foo.example.com")
+
+// 	cop.SetDenyHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		w.WriteHeader(http.StatusBadRequest)
+// 		w.Write([]byte("CSRF check failed"))
+// 	}))
+
+// 	return cop.Handler(next)
+// }

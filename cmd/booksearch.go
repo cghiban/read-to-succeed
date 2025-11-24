@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"read2succeed/google_books"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -47,7 +48,7 @@ func (s *BookSearch) DoSearch(rw http.ResponseWriter, r *http.Request) {
 
 	// https://developers.google.com/books/docs/v1/using
 
-	result := google_books.DoSearch(query)
+	result := google_books.DoSearch(query, "en")
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.Header().Set("Cache-Control", "no-cache")
@@ -115,9 +116,10 @@ func main() {
 		}
 	}()
 
-	sigChan := make(chan os.Signal)
-	signal.Notify(sigChan, os.Kill)
-	signal.Notify(sigChan, os.Interrupt)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGINT)
+	signal.Notify(sigChan, syscall.SIGQUIT)
 
 	sig := <-sigChan
 	l.Println("Received terminate, graceful shutdown", sig)

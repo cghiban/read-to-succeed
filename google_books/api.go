@@ -3,6 +3,7 @@ package google_books
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -59,15 +60,19 @@ const (
 	endPoint string = "https://www.googleapis.com/books/v1/volumes"
 )
 
-//curl -sk "https://www.googleapis.com/books/v1/volumes?q=Mihai%20Eminescu&fields=totalItems,kind,items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/subtitle,volumeInfo/description,volumeInfo/imageLinks,volumeInfo/language)
-func DoSearch(query string) VolumeSearchResult {
+// curl -sk "https://www.googleapis.com/books/v1/volumes?q=Mihai%20Eminescu&fields=totalItems,kind,items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/subtitle,volumeInfo/description,volumeInfo/imageLinks,volumeInfo/language)
+func DoSearch(query, lang string) VolumeSearchResult {
 
+	if lang == "" {
+		lang = "en"
+	}
 	req, _ := http.NewRequest("GET", endPoint, nil)
 	req.Header.Add("Accept", "application/json")
 
 	//uri := endPoint + "?fields=totalItems,items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/subtitle,volumeInfo/description,volumeInfo/imageLinks,volumeInfo/language)"
 	uri := endPoint + "?projection=lite"
 	uri += "&printType=books"
+	uri += "&lang=" + lang
 	uri += "&q=" + url.QueryEscape(query)
 
 	req.URL.RawQuery = uri
@@ -91,10 +96,15 @@ func DoSearch(query string) VolumeSearchResult {
 
 	defer resp.Body.Close()
 
-	fmt.Printf("resp.StatusCode = %+v\n", resp.StatusCode)
-	fmt.Printf("resp.Status = %+v\n", resp.Status)
 	if resp.StatusCode != 200 {
-		// return err
+		fmt.Printf("resp.Status = %+v\n", resp.Status)
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Printf("ERROR reading data: %s\n", err)
+		} else {
+			fmt.Printf("ERROR: %s\n", respBody)
+		}
+		return VolumeSearchResult{}
 	}
 
 	var output VolumeSearchResult

@@ -19,7 +19,7 @@
     Totals:
       <ul>
       {{ range .Stats -}}
-        <li><label>{{ .ReaderName }}</label> {{ .TotalDuration }}</li>
+        <li><label>{{ .ReaderName }}</label> {{ .TotalDuration }} / {{ .TotalPages }}</li>
       {{ end }}
       </ul>
     </div>
@@ -40,7 +40,7 @@
       <td>{{.}}</td>
 	  <td>{{ range $readers }}
 		  {{ if ne .ReaderName "-"}}
-		  <div>{{ .ReaderName }}: {{ .Value }}</div>
+		  <div>{{ .ReaderName }}: {{ .TotalDuration }} / {{ .TotalPages }}</div>
           {{ end }}
       {{end}}</td>
   </tr>
