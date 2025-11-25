@@ -44,8 +44,8 @@ func init() {
 	}
 
 	//db := InitDB(*dbPath)
-	*dbPath += "?_fk=1&_journal=WAL&_cache_size=-16000"
-	db, err := sql.Open("sqlite3", *dbPath) // Open the created SQLite File
+	*dbPath += "?_fk=1&_synchronous=NORMAL&_journal=WAL&_cache_size=16000&_loc=auto"
+	db, err := sql.Open("sqlite3", *dbPath)
 
 	if err != nil {
 		log.Fatal(err)
