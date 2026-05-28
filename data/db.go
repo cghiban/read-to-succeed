@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"math/rand"
 	"os"
 	"read2succeed/utils"
 	"strconv"
@@ -138,10 +137,7 @@ func (ds *DataStore) GetSQLiteVersion() (string, error) {
 
 // CreateUser - add new user into db
 func (ds *DataStore) CreateUser(u *AuthUser) error {
-	query := `
-	INSERT INTO auth_user (email, name, passw, is_admin, created)
-	VALUES (?, ?, ?, false, datetime('now'))
-	`
+	query := `INSERT INTO auth_user (email, name, passw, is_admin) VALUES (?, ?, ?, false)`
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
 		return err
@@ -194,7 +190,7 @@ func (ds *DataStore) GetUser(email string) (*AuthUser, error) {
 	UserID, _ := strconv.Atoi(userID)
 	u.ID = UserID
 	t, _ := time.Parse("2006-01-02T15:04:05Z", created)
-	u.CreatedOn = t
+	u.CreatedOn = t.In(loc)
 
 	return &u, nil
 }
@@ -227,9 +223,28 @@ func (ds *DataStore) GetUserByID(user_id int) (*AuthUser, error) {
 	UserID, _ := strconv.Atoi(userID)
 	u.ID = UserID
 	t, _ := time.Parse("2006-01-02T15:04:05Z", created)
-	u.CreatedOn = t
+	u.CreatedOn = t.In(loc)
 
 	return &u, nil
+}
+
+// ListUsers - returns all users (id, name, email)
+func (ds *DataStore) ListUsers() ([]*AuthUser, error) {
+	rows, err := ds.DB.Query(`SELECT user_id, name, email FROM auth_user ORDER BY user_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*AuthUser
+	for rows.Next() {
+		u := &AuthUser{}
+		if err := rows.Scan(&u.ID, &u.Name, &u.Email); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
 }
 
 // UpdatePassword - sets a new hashed password for the given user
@@ -653,8 +668,7 @@ func (ds *DataStore) GetReaderByID(readerID int) (Reader, error) {
 
 // AddReader - add new reader into the db
 func (ds *DataStore) AddReader(r *Reader) error {
-	query := `INSERT INTO readers (user_id, name, created)
-        VALUES (?, ?, datetime('now'))`
+	query := `INSERT INTO readers (user_id, name, created) VALUES (?, ?, datetime('now'))`
 
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
@@ -695,18 +709,16 @@ func (ds *DataStore) GetReaderByName(name string) (Reader, error) {
 
 // AddGroup - add new group
 func (ds *DataStore) AddGroup(g *Group) error {
-	query := `INSERT INTO groups (user_id, name, code, datetime('now')) VALUES (?, ?, ?, ?)`
+	query := `INSERT INTO groups (user_id, name, code) VALUES (?, ?, ?)`
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	rand.Seed(time.Now().UnixNano())
 	g.AccessCode = utils.RandStringRunes(5)
-	g.CreatedOn = time.Now().Truncate(time.Second)
 
-	res, err := stmt.Exec(g.UserID, g.Name, g.AccessCode, g.CreatedOn)
+	res, err := stmt.Exec(g.UserID, g.Name, g.AccessCode)
 	if err != nil {
 		return err
 	}
@@ -861,7 +873,7 @@ func (ds *DataStore) GetUserGroups(userID int) ([]Group, error) {
 			Name:       gName,
 			AccessCode: gCode,
 			Status:     gStatus,
-			CreatedOn:  t,
+			CreatedOn:  t.In(loc),
 		})
 	}
 	if err := rows.Err(); err != nil {
@@ -939,7 +951,8 @@ func (ds *DataStore) GetGroupByID(groupID int) (Group, error) {
 		return g, err
 	}
 	g.UserID, _ = strconv.Atoi(gUserID)
-	g.CreatedOn, _ = time.Parse("2006-01-02T15:04:05Z07:00", gCreated)
+	t, _ := time.Parse("2006-01-02T15:04:05Z07:00", gCreated)
+	g.CreatedOn = t.In(loc)
 	g.ID = groupID
 
 	return g, nil
@@ -972,7 +985,8 @@ func (ds *DataStore) GetGroupReaders(groupID int) ([]Reader, error) {
 			return readers, err
 		}
 		//g.UserID, _ = strconv.Atoi(gUserID)
-		r.CreatedOn, _ = time.Parse("2006-01-02T15:04:05Z07:00", created)
+		t, _ := time.Parse("2006-01-02T15:04:05Z07:00", created)
+		r.CreatedOn = t.In(loc)
 		//g.ID = groupID
 		readers = append(readers, r)
 	}

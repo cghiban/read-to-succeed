@@ -217,6 +217,7 @@ func (s *Service) ResetPassword(rw http.ResponseWriter, r *http.Request) {
 			http.Error(rw, "failed to update password", http.StatusInternalServerError)
 			return
 		}
+		s.l.Printf("password updated for user_id=%d", rt.userID)
 
 		s.resetTokenMu.Lock()
 		delete(s.resetTokens, token)

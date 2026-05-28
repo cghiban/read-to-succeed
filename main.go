@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"read2succeed/data"
 	"read2succeed/handlers"
 	"read2succeed/web"
@@ -44,23 +45,42 @@ func init() {
 	}
 
 	// will store everything in UTC and we'll convert times to whatever TZ is set when reading from DB
-	*dbPath += "?_fk=1&_synchronous=NORMAL&_journal=WAL&_cache_size=16000&_loc=utc"
+	*dbPath += "?_fk=1&_synchronous=NORMAL&_journal=WAL&_cache_size=16000&_loc=UTC"
 	db, err := sql.Open("sqlite3", *dbPath)
-
 	if err != nil {
 		log.Fatal(err)
 	}
-	if db == nil {
+
+	if db == nil || db.Ping() != nil {
 		log.Fatal("unable to get a db connection")
 	}
 	l := log.New(os.Stdout, "reading 2 succeed", log.LstdFlags)
 	dataStore = &data.DataStore{DB: db, L: l}
 
+	// ----------------------------------------------------------------
+	// DEBUG
 	sqliteVersion, _ := dataStore.GetSQLiteVersion()
 	l.Println("using SQLite version", sqliteVersion)
 
-	// to keep readers in session
-	//gob.Register([]data.Reader{})
+	if users, err := dataStore.ListUsers(); err != nil {
+		l.Println("could not list users:", err)
+	} else {
+		for _, u := range users {
+			l.Printf("user: id=%d name=%q email=%s", u.ID, u.Name, u.Email)
+		}
+	}
+
+	varDir := path.Dir(*dbPath)
+	if entries, err := os.ReadDir(varDir); err != nil {
+		l.Println(varDir, ":", err)
+	} else {
+		for _, e := range entries {
+			l.Printf("%s/%s", varDir, e.Name())
+		}
+	}
+
+	// /DEBUG
+	// ----------------------------------------------------------------
 }
 
 func main() {
