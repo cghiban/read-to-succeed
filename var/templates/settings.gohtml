@@ -4,8 +4,6 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inconsolata">
-        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <link rel="stylesheet" href="/static/styles.css">
 
         <title>Settings - Read to Succeed</title>
@@ -41,7 +39,7 @@
       <td data__reader_id="{{.ID}}">{{.Name}}</td>
   </tr>
   {{ end }}
-  <tbody>
+  </tbody>
   </table>
 </div>
 
@@ -62,12 +60,12 @@
       <td>{{$key}}</td>
       <td><ul>
       {{range $value }}
-        <li>{{.Name}} <a href="#" gid="{{.GroupID}}" rid="{{.ID}}">x</a></li>
+        <li>{{.Name}} <a href="#" data-gid="{{.GroupID}}" data-rid="{{.ID}}">x</a></li>
       {{end}}
       </ul></td>
   </tr>
   {{ end }}
-  <tbody>
+  </tbody>
   </table>
 </div>
 {{end}}
@@ -97,7 +95,7 @@
             </td>
           </tr>
         {{ end }}
-        <tbody>
+        </tbody>
       </table>
     </div>
 {{ end }}

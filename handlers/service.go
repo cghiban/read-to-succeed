@@ -11,6 +11,7 @@ import (
 	"read2succeed/google_books"
 	"sort"
 	"strconv"
+	"sync"
 	"text/template"
 	"time"
 
@@ -18,14 +19,21 @@ import (
 	"github.com/unknwon/paginater"
 )
 
+type resetToken struct {
+	userID    int
+	expiresAt time.Time
+}
+
 // Service data struct
 type Service struct {
 	l     *log.Logger
 	store *data.DataStore
 	//readers *string
 	//session *sqlitestore.SqliteStore
-	session *sessions.CookieStore
-	t       *template.Template
+	session      *sessions.CookieStore
+	t            *template.Template
+	resetTokens  map[string]resetToken
+	resetTokenMu sync.Mutex
 }
 
 // NewService initializes a new Serivice
@@ -59,7 +67,17 @@ func NewService(l *log.Logger, store *data.DataStore, sessionKey *string, resour
 		MaxAge:   7 * 86400,
 	}
 
-	return &Service{l: l, store: store, t: templates, session: sessStore}
+	return &Service{l: l, store: store, t: templates, session: sessStore, resetTokens: make(map[string]resetToken)}
+}
+
+// getSession returns the current session, clearing an invalid cookie instead of erroring.
+func (s *Service) getSession(w http.ResponseWriter, r *http.Request) *sessions.Session {
+	session, err := s.session.Get(r, "session")
+	if err != nil {
+		s.l.Println("invalid session cookie, resetting:", err)
+		session.Save(r, w)
+	}
+	return session
 }
 
 func _buildPaginater(total, itemsPerPage, page int, r *http.Request) (*paginater.Paginater, string) {
@@ -96,11 +114,7 @@ func _buildLocation() (*time.Location, error) {
 
 // GetReadings - list user's/users' read books
 func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
-	session, err := s.session.Get(r, "session")
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	session := s.getSession(rw, r)
 
 	isLoggedIn := s.IsLoggedIn(r)
 	if !isLoggedIn {
@@ -109,16 +123,11 @@ func (s *Service) GetReadings(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	reader := r.URL.Query().Get("reader")
-	//userIDv := session.Values["user_id"]
-	//userID := userIDv.(int)
 	userID := session.Values["user_id"].(int)
-	//isAdmin := session.Values["is_admin"].(bool)
-	//fmt.Printf("userID: %T\t%q", userID, userID)
 
-	var page int
 	itemsPerPage := 20
 	pageParam := r.URL.Query().Get("page")
-	page, err = strconv.Atoi(pageParam)
+	page, err := strconv.Atoi(pageParam)
 	if err != nil {
 		page = 1
 	}
@@ -229,11 +238,7 @@ func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 
 // GetDailyStats - list user's/users' read books
 func (s *Service) GetDailyStats(rw http.ResponseWriter, r *http.Request) {
-	session, err := s.session.Get(r, "session")
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	session := s.getSession(rw, r)
 
 	isLoggedIn := s.IsLoggedIn(r)
 	if !isLoggedIn {
@@ -242,10 +247,7 @@ func (s *Service) GetDailyStats(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	reader := r.URL.Query().Get("reader")
-	//userIDv := session.Values["user_id"]
-	//userID := userIDv.(int)
 	userID := session.Values["user_id"].(int)
-	//fmt.Printf("userID: %T\t%q", userID, userID)
 
 	stats, err := s.store.GetStatsTotals(userID)
 	if err != nil {

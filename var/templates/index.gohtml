@@ -54,7 +54,7 @@
       <td>{{.ReaderName}}</td>
       <td>{{.BookAuthor}}</td>
       <td>{{.BookTitle}}
-        <a href="#" id="addentry" data__reader="{{.ReaderName}}" data__author="{{.BookAuthor}}" data__title="{{.BookTitle}}">
+        <a href="#" id="addentry" data-reader="{{.ReaderName}}" data-author="{{.BookAuthor}}" data-title="{{.BookTitle}}">
           <button> + </button>
         </a>
       </td>
@@ -65,7 +65,7 @@
       <td>{{dateISOish .CreatedOn}}</td>
   </tr>
   {{ end }}
-  <tbody>
+  </tbody>
   </table>
   {{block "pagination" .}}{{end}}
 </div>

@@ -1,6 +1,6 @@
 {{define "pagination"}}
 {{if gt .Page.TotalPages 1}}
-<div class=".pagination">
+<div class="pagination">
     {{if not .Page.IsFirst}}<a href="{{.PageQueryRaw}}">[First]</a>{{end}}
     {{if .Page.HasPrevious}}<a href="{{.PageQueryRaw}}&page={{.Page.Previous}}">[Previous]</a>{{end}}
 

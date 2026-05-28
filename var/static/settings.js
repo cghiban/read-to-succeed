@@ -50,8 +50,8 @@ document.querySelectorAll("#tgroupreaders a").forEach((a, i) => {
     //let a = ev.target;
     //console.log(a.getAttribute("gid"), " -- ", a.getAttribute("rid"));
     let params = {
-      group_id: parseInt(a.getAttribute("gid"), 10),
-      reader_id: parseInt(a.getAttribute("rid"), 10),
+      group_id: parseInt(a.getAttribute("data-gid"), 10),
+      reader_id: parseInt(a.getAttribute("data-rid"), 10),
     };
     postData("/leavegroup", params).then((data) => {
       console.log(data); // JSON data parsed by `data.json()` call
