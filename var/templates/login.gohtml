@@ -21,6 +21,9 @@
             Login to setup your account.
         </div>
         {{end}}
+        {{if .PasswordReset}}
+        <div class="note">Password updated. You can now log in.</div>
+        {{end}}
 
         <form method="POST" action="/login">
             {{ .csrfField }}
@@ -38,6 +41,7 @@
             </div>
         </form>
         <div>Don't have an account? <a href="/register">Register</a> to log your readings.</div>
+        <div><a href="/forgot-password">Forgot your password?</a></div>
     </div>
   </body>
 </html>

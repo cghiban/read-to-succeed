@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"math/rand"
+	"os"
 	"read2succeed/utils"
 	"strconv"
 	"strings"
@@ -14,6 +16,22 @@ import (
 
 	_ "github.com/mattn/go-sqlite3" // Import go-sqlite3 library
 )
+
+var (
+	loc *time.Location
+)
+
+func init() {
+	tz := os.Getenv("TZ")
+	if tz == "" {
+		tz = "UTC"
+	}
+	var err error
+	if loc, err = time.LoadLocation(tz); err != nil {
+		slog.Warn("invalid timezone, defaulting to UTC", slog.Any("error", err))
+		loc = time.UTC
+	}
+}
 
 // AuthUser - user
 type AuthUser struct {
@@ -48,6 +66,21 @@ type Reading struct {
 	Pages      int       `json:"pages"`
 	Note       string    `json:"note"`
 	CreatedOn  time.Time `json:"-"`
+}
+
+func (r *Reading) Scan(s interface{ Scan(dest ...any) error }) error {
+	var created string
+	var note sql.NullString
+	if err := s.Scan(&r.ID, &r.UserID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &r.Day, &r.Duration, &r.Pages, &note, &created); err != nil {
+		return err
+	}
+	r.Note = note.String
+	t, err := time.Parse("2006-01-02T15:04:05Z", created)
+	if err != nil {
+		return err
+	}
+	r.CreatedOn = t.In(loc)
+	return nil
 }
 
 // Reader - type for handling readers
@@ -107,7 +140,7 @@ func (ds *DataStore) GetSQLiteVersion() (string, error) {
 func (ds *DataStore) CreateUser(u *AuthUser) error {
 	query := `
 	INSERT INTO auth_user (email, name, passw, is_admin, created)
-	VALUES (?, ?, ?, false, datetime('now','localtime'))
+	VALUES (?, ?, ?, false, datetime('now'))
 	`
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
@@ -199,6 +232,12 @@ func (ds *DataStore) GetUserByID(user_id int) (*AuthUser, error) {
 	return &u, nil
 }
 
+// UpdatePassword - sets a new hashed password for the given user
+func (ds *DataStore) UpdatePassword(userID int, newPass string) error {
+	_, err := ds.DB.Exec(`UPDATE auth_user SET passw = ? WHERE user_id = ?`, encryptPassword(newPass), userID)
+	return err
+}
+
 // AddReading - add new reading entry into the db
 func (ds *DataStore) AddReading(r *Reading) error {
 
@@ -210,8 +249,7 @@ func (ds *DataStore) AddReading(r *Reading) error {
 
 	query := `
         INSERT INTO readings (user_id, reader, reader_id, book_author, book_title, day, duration, pages, note, created)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
-    `
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
 
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
@@ -258,7 +296,7 @@ func (ds *DataStore) ListUserReadings(req UserReadingsRequest) (UserReadingsResp
 	output := UserReadingsResponse{}
 
 	queryFmt := `
-        SELECT id, reader, book_author, book_title, day, duration, pages, note, created
+        SELECT id, user_id, reader, book_author, book_title, day, duration, pages, note, created
         FROM readings WHERE user_id = ? %s`
 	var query, where string
 	var rows *sql.Rows
@@ -274,13 +312,13 @@ func (ds *DataStore) ListUserReadings(req UserReadingsRequest) (UserReadingsResp
 	}
 
 	var limit, offset int
-	if req.Limit != nil && *req.Limit <= 100 {
+	if req.Limit != nil && *req.Limit > 0 && *req.Limit <= 100 {
 		limit = *req.Limit
 	} else {
 		limit = 20
 	}
 
-	if req.Offset != nil {
+	if req.Offset != nil && *req.Offset >= 0 {
 		offset = *req.Offset
 	}
 
@@ -294,25 +332,24 @@ func (ds *DataStore) ListUserReadings(req UserReadingsRequest) (UserReadingsResp
 
 	readings := []Reading{}
 	var r Reading
-	var created string
+
 	for rows.Next() {
-		rows.Scan(&r.ID, &r.ReaderName, &r.BookAuthor, &r.BookTitle, &r.Day, &r.Duration, &r.Pages, &r.Note, &created)
-		t, _ := time.Parse("2006-01-02T15:04:05Z", created)
-		r.CreatedOn = t
+		if err = r.Scan(rows); err != nil {
+			return output, err
+		}
 		readings = append(readings, r)
+	}
+	if err := rows.Err(); err != nil {
+		return output, err
 	}
 
 	output.Readings = readings
 
 	totalQuery := "SELECT count(*) FROM readings WHERE user_id = ? " + where
-	totalQuery += " ORDER BY id desc"
-
-	//ds.L.Println(totalQuery, args)
 
 	row := ds.DB.QueryRow(totalQuery, args...)
 	var total int
-	err = row.Scan(&total)
-	if err != nil {
+	if err = row.Scan(&total); err != nil {
 		ds.L.Printf("can't query totals: %+v", err)
 		return output, err
 	}
@@ -336,6 +373,24 @@ type GroupReading struct {
 	Duration   int       `json:"duration"`
 	Pages      int       `json:"pages"`
 	CreatedOn  time.Time `json:"-"`
+}
+
+func (gr *GroupReading) Scan(s interface{ Scan(dest ...any) error }) error {
+
+	// g.id, g.name, r.reader, r.reader_id, r.book_author, r.book_title, r.day, r.duration, r.pages, r.created
+	var created string
+	var t time.Time
+	err := s.Scan(&gr.GroupID, &gr.GroupName, &gr.ReaderName, &gr.ReaderID,
+		&gr.BookAuthor, &gr.BookTitle, &gr.Day, &gr.Duration, &gr.Pages, &created)
+	if err != nil {
+		return err
+	}
+	t, err = time.Parse("2006-01-02T15:04:05Z", created)
+	if err != nil {
+		return err
+	}
+	gr.CreatedOn = t.In(loc)
+	return nil
 }
 
 type GroupReadingsRequest struct {
@@ -401,7 +456,6 @@ func (ds *DataStore) ListUserGroupsReadings(req GroupReadingsRequest) (GroupRead
 	//fmt.Println(query, req.UserID, req.GroupID)
 
 	rows, err = ds.DB.Query(query, args...)
-
 	if err != nil {
 		return output, err
 	}
@@ -410,30 +464,14 @@ func (ds *DataStore) ListUserGroupsReadings(req GroupReadingsRequest) (GroupRead
 	readings := []GroupReading{}
 	var r GroupReading
 
-	//var day, created, duration string
-	var created string
 	for rows.Next() {
-		rows.Scan(
-			&r.GroupID,
-			&r.GroupName,
-			&r.ReaderName,
-			&r.ReaderID,
-			&r.BookAuthor,
-			&r.BookTitle,
-			&r.Day,
-			&r.Duration,
-			&r.Pages,
-			&created)
-
-		//ds.l.Println(day, duration, created)
-		t, _ := time.Parse("2006-01-02T15:04:05Z", created)
-		r.CreatedOn = t
-		/*t, _ = time.Parse("2006-01-02T00:00:00Z", day)
-		r.Day = t
-		r.Duration, _ = time.ParseDuration(duration)*/
-
-		//ds.l.Println(r)
+		if err = r.Scan(rows); err != nil {
+			return output, err
+		}
 		readings = append(readings, r)
+	}
+	if err := rows.Err(); err != nil {
+		return output, err
 	}
 
 	output.GroupReadings = readings
@@ -502,8 +540,13 @@ func (ds *DataStore) GetStatsTotals(userID int) ([]TotalReadingStat, error) {
 
 	//var created string
 	for rows.Next() {
-		rows.Scan(&stat.TotalDuration, &stat.TotalPages, &stat.ReaderName)
+		if err := rows.Scan(&stat.TotalDuration, &stat.TotalPages, &stat.ReaderName); err != nil {
+			return totals, err
+		}
 		totals = append(totals, stat)
+	}
+	if err := rows.Err(); err != nil {
+		return totals, err
 	}
 
 	return totals, nil
@@ -546,15 +589,18 @@ func (ds *DataStore) GetStatsDaily(userID int) (DailyReadingStats, error) {
 
 	var entry DailyReaderStat
 	for rows.Next() {
-		rows.Scan(&entry.Label, &entry.ReaderName, &entry.TotalDuration, &entry.TotalPages)
+		if err := rows.Scan(&entry.Label, &entry.ReaderName, &entry.TotalDuration, &entry.TotalPages); err != nil {
+			return dailyStats, err
+		}
 		if _, ok := dailyStats[entry.Label]; !ok {
 			dailyStats[entry.Label] = []DailyReaderStat{entry}
 		} else {
 			dailyStats[entry.Label] = append(dailyStats[entry.Label], entry)
 		}
-		//fmt.Printf("###\t%+v\n", entry)
 	}
-	//fmt.Printf("%+v", dailyStats)
+	if err := rows.Err(); err != nil {
+		return dailyStats, err
+	}
 
 	return dailyStats, nil
 }
@@ -579,8 +625,13 @@ func (ds *DataStore) GetUserReaders(userID int) ([]Reader, error) {
 	var reader Reader
 
 	for rows.Next() {
-		rows.Scan(&reader.ID, &reader.Name)
+		if err := rows.Scan(&reader.ID, &reader.Name); err != nil {
+			return readers, err
+		}
 		readers = append(readers, reader)
+	}
+	if err := rows.Err(); err != nil {
+		return readers, err
 	}
 
 	return readers, nil
@@ -590,24 +641,20 @@ func (ds *DataStore) GetUserReaders(userID int) ([]Reader, error) {
 func (ds *DataStore) GetReaderByID(readerID int) (Reader, error) {
 
 	query := `SELECT reader_id, user_id, name FROM readers WHERE reader_id = ?`
-	//ds.L.Printf("Query: %s [%d]", query, readerID)
-
-	var err error
 	row := ds.DB.QueryRow(query, readerID)
 
-	if err != nil {
+	var reader Reader
+	if err := row.Scan(&reader.ID, &reader.UserID, &reader.Name); err != nil {
 		return Reader{}, err
 	}
-	var reader Reader
-	err = row.Scan(&reader.ID, &reader.UserID, &reader.Name)
 
-	return reader, err
+	return reader, nil
 }
 
 // AddReader - add new reader into the db
 func (ds *DataStore) AddReader(r *Reader) error {
 	query := `INSERT INTO readers (user_id, name, created)
-        VALUES (?, ?, datetime('now','localtime'))`
+        VALUES (?, ?, datetime('now'))`
 
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
@@ -648,7 +695,7 @@ func (ds *DataStore) GetReaderByName(name string) (Reader, error) {
 
 // AddGroup - add new group
 func (ds *DataStore) AddGroup(g *Group) error {
-	query := `INSERT INTO groups (user_id, name, code, created) VALUES (?, ?, ?, ?)`
+	query := `INSERT INTO groups (user_id, name, code, datetime('now')) VALUES (?, ?, ?, ?)`
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
 		return err
@@ -758,9 +805,9 @@ func (ds *DataStore) GetGroupsAndReaders(userID int) (map[string][]GReader, erro
 	var gName, readerData string
 
 	for rows.Next() {
-		rows.Scan(&gID, &gName, &readerData)
-		//readers = append(readers, reader)
-
+		if err := rows.Scan(&gID, &gName, &readerData); err != nil {
+			return groups, err
+		}
 		readersList := strings.Split(readerData, ",")
 		groups[gName] = []GReader{}
 		for _, r := range readersList {
@@ -772,7 +819,9 @@ func (ds *DataStore) GetGroupsAndReaders(userID int) (map[string][]GReader, erro
 			}
 			groups[gName] = append(groups[gName], reader)
 		}
-		//fmt.Printf("###\t%s: %+v\n", gName, groups[gName])
+	}
+	if err := rows.Err(); err != nil {
+		return groups, err
 	}
 
 	return groups, nil
@@ -797,7 +846,9 @@ func (ds *DataStore) GetUserGroups(userID int) ([]Group, error) {
 	var gID, gName, gCode, gStatus, gCreated string
 
 	for rows.Next() {
-		rows.Scan(&gID, &gName, &gCode, &gStatus, &gCreated)
+		if err := rows.Scan(&gID, &gName, &gCode, &gStatus, &gCreated); err != nil {
+			return groups, err
+		}
 		t, err := time.Parse("2006-01-02T15:04:05Z07:00", gCreated)
 		if err != nil {
 			ds.L.Println("timeParse: ", err.Error())
@@ -812,6 +863,9 @@ func (ds *DataStore) GetUserGroups(userID int) ([]Group, error) {
 			Status:     gStatus,
 			CreatedOn:  t,
 		})
+	}
+	if err := rows.Err(); err != nil {
+		return groups, err
 	}
 
 	return groups, nil
@@ -855,13 +909,17 @@ func (ds *DataStore) GetUserGroupMemberCount(userID int) ([]GroupMemberCount, er
 	var gID, gCount int
 
 	for rows.Next() {
-		rows.Scan(&gID, &gName, &gCount)
-
+		if err := rows.Scan(&gID, &gName, &gCount); err != nil {
+			return groups, err
+		}
 		groups = append(groups, GroupMemberCount{
 			GroupID:     int(gID),
 			GroupName:   gName,
 			MemberCount: gCount,
 		})
+	}
+	if err := rows.Err(); err != nil {
+		return groups, err
 	}
 
 	return groups, nil

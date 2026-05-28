@@ -6,8 +6,8 @@ let modal = document.querySelector("#myModal"),
   author = document.querySelector("input[name=author]"),
   title = document.querySelector("input[name=title]"),
   day = document.querySelector("input[name=day]"),
-  duration = document.querySelector("input[name=duration]");
-pages = document.querySelector("input[name=pages]");
+  duration = document.querySelector("input[name=duration]"),
+  pages = document.querySelector("input[name=pages]");
 
 if (stats) {
   stats.hidden = true;
@@ -16,18 +16,18 @@ if (stats) {
 let addButtons = document.querySelectorAll(".addentry, #addentry");
 addButtons.forEach((b) => {
   b.addEventListener("click", (ev) => {
-    if (b.getAttribute("data__reader")) {
-      reader.value = b.getAttribute("data__reader");
+    if (b.getAttribute("data-reader")) {
+      reader.value = b.getAttribute("data-reader");
     } else {
       reader.value = readers.value;
     }
-    if (b.getAttribute("data__author")) {
-      author.value = b.getAttribute("data__author");
+    if (b.getAttribute("data-author")) {
+      author.value = b.getAttribute("data-author");
     } else {
       author.value = "";
     }
-    if (b.getAttribute("data__title")) {
-      title.value = b.getAttribute("data__title");
+    if (b.getAttribute("data-title")) {
+      title.value = b.getAttribute("data-title");
     } else {
       title.value = "";
     }
@@ -52,6 +52,22 @@ if (readers) {
   });
 }
 
+async function postData(url = "", data = {}) {
+  const response = await fetch(url, {
+    method: "POST",
+    mode: "cors",
+    cache: "no-cache",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    redirect: "follow",
+    referrerPolicy: "no-referrer",
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
 document.querySelector("form#addreading button").addEventListener(
   "click",
   (ev) => {
@@ -60,22 +76,6 @@ document.querySelector("form#addreading button").addEventListener(
     console.log("valid: ", form.checkValidity());
     if (!form.checkValidity()) return;
 
-    async function postData(url = "", data = {}) {
-      // Default options are marked with *
-      const response = await fetch(url, {
-        method: "POST", // *GET, POST, PUT, DELETE, etc.
-        mode: "cors", // no-cors, *cors, same-origin
-        cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
-        credentials: "same-origin", // include, *same-origin, omit
-        headers: {
-          "Content-Type": "application/json",
-        },
-        redirect: "follow", // manual, *follow, error
-        referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-        body: JSON.stringify(data), // body data type must match "Content-Type" header
-      });
-      return response.json(); // parses JSON response into native JavaScript objects
-    }
     let data = {
       reader: formData.get("reader").trim(),
       author: formData.get("author").trim(),

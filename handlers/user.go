@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"read2succeed/data"
 	"strings"
+	"time"
 
 	"github.com/gorilla/csrf"
 )
@@ -81,8 +84,13 @@ func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			msgs := session.Flashes()
 			session.Save(r, rw) // needs to clear the flashes
-			if len(msgs) > 0 && msgs[0].(string) == "AccountCreated" {
-				formData["AccountCreated"] = true
+			for _, m := range msgs {
+				switch m.(string) {
+				case "AccountCreated":
+					formData["AccountCreated"] = true
+				case "PasswordReset":
+					formData["PasswordReset"] = true
+				}
 			}
 		}
 
@@ -133,6 +141,93 @@ func (s *Service) UserLogIn(rw http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(rw, "bad request", http.StatusBadRequest)
 		return
+	}
+}
+
+// ForgotPassword - renders the forgot-password form and issues a reset token
+func (s *Service) ForgotPassword(rw http.ResponseWriter, r *http.Request) {
+	formData := map[string]any{
+		csrf.TemplateTag: csrf.TemplateField(r),
+	}
+	switch r.Method {
+	case http.MethodGet:
+		if err := s.t.ExecuteTemplate(rw, "forgot-password.gohtml", formData); err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		}
+	case http.MethodPost:
+		r.ParseForm()
+		email := strings.TrimSpace(r.Form.Get("email"))
+
+		user, err := s.store.GetUser(email)
+		if err == nil && user != nil {
+			raw := make([]byte, 32)
+			rand.Read(raw)
+			token := hex.EncodeToString(raw)
+
+			s.resetTokenMu.Lock()
+			s.resetTokens[token] = resetToken{userID: user.ID, expiresAt: time.Now().Add(time.Hour)}
+			s.resetTokenMu.Unlock()
+
+			s.l.Printf("password reset token for %s: %s", email, token)
+		}
+		// always show the same message to avoid user enumeration
+		formData["Message"] = "If that email exists, a reset link has been logged to the server."
+		if err := s.t.ExecuteTemplate(rw, "forgot-password.gohtml", formData); err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+// ResetPassword - validates the token and sets a new password
+func (s *Service) ResetPassword(rw http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+
+	s.resetTokenMu.Lock()
+	rt, ok := s.resetTokens[token]
+	s.resetTokenMu.Unlock()
+
+	formData := map[string]any{
+		csrf.TemplateTag: csrf.TemplateField(r),
+		"Token":          token,
+	}
+
+	if !ok || time.Now().After(rt.expiresAt) {
+		formData["Error"] = "Reset link is invalid or has expired."
+		if err := s.t.ExecuteTemplate(rw, "reset-password.gohtml", formData); err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		if err := s.t.ExecuteTemplate(rw, "reset-password.gohtml", formData); err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		}
+	case http.MethodPost:
+		r.ParseForm()
+		password := strings.TrimSpace(r.Form.Get("password"))
+		if password == "" {
+			formData["Error"] = "Password cannot be empty."
+			s.t.ExecuteTemplate(rw, "reset-password.gohtml", formData)
+			return
+		}
+
+		if err := s.store.UpdatePassword(rt.userID, password); err != nil {
+			http.Error(rw, "failed to update password", http.StatusInternalServerError)
+			return
+		}
+
+		s.resetTokenMu.Lock()
+		delete(s.resetTokens, token)
+		s.resetTokenMu.Unlock()
+
+		session, err := s.session.Get(r, "session")
+		if err == nil {
+			session.AddFlash("PasswordReset")
+			session.Save(r, rw)
+		}
+		http.Redirect(rw, r, "/login", http.StatusFound)
 	}
 }
 

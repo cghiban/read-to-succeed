@@ -43,8 +43,8 @@ func init() {
 		os.Exit(1)
 	}
 
-	//db := InitDB(*dbPath)
-	*dbPath += "?_fk=1&_synchronous=NORMAL&_journal=WAL&_cache_size=16000&_loc=auto"
+	// will store everything in UTC and we'll convert times to whatever TZ is set when reading from DB
+	*dbPath += "?_fk=1&_synchronous=NORMAL&_journal=WAL&_cache_size=16000&_loc=utc"
 	db, err := sql.Open("sqlite3", *dbPath)
 
 	if err != nil {
@@ -64,7 +64,7 @@ func init() {
 }
 
 func main() {
-	slog := log.New(os.Stdout, "reading 2 succees", log.LstdFlags)
+	slog := log.New(os.Stdout, "reading 2 succeed", log.LstdFlags)
 
 	r2sservice := handlers.NewService(slog, dataStore, sessionKey, resources)
 
@@ -94,8 +94,8 @@ func main() {
 	sm.Handle("/dailystats", web.WrapMiddleware(r2sservice.GetDailyStats, authMw.UserViaSession, authMw.RequireUser))
 	sm.HandleFunc("/about", r2sservice.About)
 
-	env := os.Getenv("APP_ENV")
-	if env == "local" || env == "dev" {
+	envir := os.Getenv("APP_ENV")
+	if envir == "local" || envir == "dev" {
 		sm.HandleFunc("/search_books", r2sservice.SearchGoogleBooks)
 		sm.HandleFunc("/add_book", r2sservice.AddBook)
 		sm.HandleFunc("/library", r2sservice.Library)
@@ -109,6 +109,8 @@ func main() {
 	userRouter.HandleFunc("/register", r2sservice.UserSignUp)
 	userRouter.HandleFunc("/login", r2sservice.UserLogIn)
 	userRouter.HandleFunc("/logout", r2sservice.UserLogOut)
+	userRouter.HandleFunc("/forgot-password", r2sservice.ForgotPassword)
+	userRouter.HandleFunc("/reset-password", r2sservice.ResetPassword)
 
 	//sm.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("var/static/"))))
 
@@ -141,7 +143,8 @@ func main() {
 
 	sig := <-sigChan
 	slog.Println("Received terminate, graceful shutdown", sig)
-	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	s.Shutdown(ctx)
 }
 
