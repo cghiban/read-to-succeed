@@ -68,23 +68,22 @@ func DoSearch(query, lang string) VolumeSearchResult {
 		lang = "en"
 	}
 
-	apiKey := os.Getenv("GOOGLE_BOOKS_API_KEY")
-
 	q := url.Values{}
-	if apiKey != "" {
-		q.Set("key", apiKey)
-	}
-	q.Set("projection", "lite")
-	q.Set("printType", "books")
+	q.Set("projection", "lite") // Returns only certain fields
+	q.Set("printType", "books") // Returns only results that are books
 	q.Set("langRestrict", lang)
 	q.Set("q", query)
 
 	// q.Add("fields", "totalItems,items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/subtitle,volumeInfo/description,volumeInfo/imageLinks,volumeInfo/language)")
-	//    fmt.Println("query:", q.Encode())
+	// fmt.Println("query:", q.Encode())
+
+	fmt.Println("url:", q.Encode())
+	apiKey := os.Getenv("GOOGLE_BOOKS_API_KEY")
+	if apiKey != "" {
+		q.Set("key", apiKey)
+	}
 
 	uri := endPoint + "?" + q.Encode()
-	fmt.Println("url:", uri)
-
 	req, _ := http.NewRequest("GET", uri, nil)
 	req.Header.Add("Accept", "application/json")
 

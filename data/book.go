@@ -2,6 +2,7 @@ package data
 
 import (
 	"log"
+	"strings"
 	"time"
 )
 
@@ -36,7 +37,7 @@ func (ds *DataStore) AddBook(nb NewBook) (Book, error) {
 
 	query := `
         INSERT INTO books (user_id, title, authors, isbn, thumb_url, added_on)
-        VALUES (?, ?, ?, ?, ?, ?)`
+        VALUES (?, ?, ?, ?, ?, datetime('now'))`
 
 	stmt, err := ds.DB.Prepare(query)
 	if err != nil {
@@ -46,7 +47,10 @@ func (ds *DataStore) AddBook(nb NewBook) (Book, error) {
 
 	now := time.Now().Round(time.Second)
 
-	res, err := stmt.Exec(nb.UserID, nb.Title, nb.Authors, nb.ISBN, nb.ThumbURL, now.Format("2006-01-02T15:04:05Z07:00"))
+	if strings.HasPrefix(nb.ThumbURL, "http://") {
+		nb.ThumbURL = strings.Replace(nb.ThumbURL, "http://", "https://", 1)
+	}
+	res, err := stmt.Exec(nb.UserID, nb.Title, nb.Authors, nb.ISBN, nb.ThumbURL)
 	if err != nil {
 		return Book{}, err
 	}

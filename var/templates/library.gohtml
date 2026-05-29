@@ -19,7 +19,7 @@
     animation-timing-function:ease-in-out;
     animation-direction: alternate;
 }
-#results img {
+#results img, td img {
 	max-height: 80px;
 	float: left;
 	margin-right: 10px;
@@ -56,17 +56,15 @@
       <th>#</th>
       <th>Authors</th>
       <th>Title</th>
-      <th>ISBN</th>
       <th>Added on</th>
     </tr>
     </thead>
     <tbody>
   {{ range .Books}}
   <tr>
-      <td>{{.ID}}</td>
+      <td><a href="javascript:;" alt="image"><img src="{{.ThumbURL}}" /></a></td>
       <td>{{.Authors}}</td>
       <td>{{.Title}}</td>
-      <td>{{.ISBN}}</td>
       <td>{{dateISOish .AddedOn}}</td>
   </tr>
   {{ end }}

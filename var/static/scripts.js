@@ -13,6 +13,10 @@ if (stats) {
   stats.hidden = true;
 }
 
+if (!reader) {
+  reader = document.querySelector("input[name=reader][type=hidden]");
+}
+
 let addButtons = document.querySelectorAll(".addentry, #addentry");
 addButtons.forEach((b) => {
   b.addEventListener("click", (ev) => {

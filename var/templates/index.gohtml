@@ -13,13 +13,17 @@
   <h1>Reading Log</h1>
 
   <div class="sub-nav">
+  {{ if eq (len .Readers) 1 }}
+      <input type="hidden" id="readers" name="readers" value="{{ (index .Readers 0).Name }}"/>
+  {{ else }}
       <select id="readers">
-  {{- $cr := .CurrentReader -}}
+      {{- $cr := .CurrentReader -}}
       <option value="">-= pick a reader =-</option>
-  {{ range .Readers -}}
+      {{ range .Readers -}}
       <option value="{{.Name}}" {{if eq .Name $cr}}selected{{end}}>{{.Name}}</option>
-  {{ end }}
+      {{ end }}
       </select>
+  {{end}}
       <a href="#" id="addentry" title="add reading">add entry <button> + </button></a>
       <a href="#" id="togglestats" title="stats">show totals</a>
   </div>
@@ -77,6 +81,9 @@
         <span class="close">&times;</span>
         <h3>Add new reading</h3>
         <form id="addreading">
+        {{ if eq (len .Readers) 1 }}
+            <input type="hidden" id="reader" name="reader" value="{{ (index .Readers 0).Name }}"/>
+        {{ else }}
           <div>
             <label>Reader</label>
             <!--<input type="text" name="reader" readonly required>-->
@@ -87,6 +94,7 @@
               {{ end}}
             </select>
           </div>
+          {{ end }}
           <div>
             <label>Book Author</label>
             <input type="text" name="author" required>
