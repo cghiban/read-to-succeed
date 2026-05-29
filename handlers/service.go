@@ -496,7 +496,7 @@ func (s *Service) AddBook(rw http.ResponseWriter, r *http.Request) {
 	userIDv := session.Values["user_id"]
 	userID, _ := userIDv.(int)
 	newBook.UserID = userID
-	log.Println(newBook)
+	log.Printf("new book: %+v\n", newBook)
 	book, err := s.store.AddBook(newBook)
 	if err != nil {
 		log.Println(err)
