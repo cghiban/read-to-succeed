@@ -201,7 +201,7 @@ func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 	log.Println(contentType, len(contentType) == 1, contentType[0])
 
 	if !s.IsLoggedIn(r) {
-		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -216,7 +216,7 @@ func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 		err := decoder.Decode(reading)
 		if err != nil {
 			log.Println(err)
-			http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+			http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
 			return
 		}
 
@@ -227,7 +227,7 @@ func (s *Service) AddReading(rw http.ResponseWriter, r *http.Request) {
 		err = s.store.AddReading(reading)
 		if err != nil {
 			log.Println(err)
-			http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+			http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
 			return
 		}
 
@@ -367,7 +367,7 @@ func (s *Service) AddReader(rw http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(newReader)
 	if err != nil {
 		log.Println(err)
-		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -436,10 +436,19 @@ func (s *Service) Library(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	readers, err := s.store.GetUserReaders(userID)
+	if err != nil {
+		log.Println(err)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	data := struct {
-		Books []data.Book
+		Books   []data.Book
+		Readers []data.Reader
 	}{
-		Books: books,
+		Books:   books,
+		Readers: readers,
 	}
 
 	if err := s.t.ExecuteTemplate(rw, "library.gohtml", data); err != nil {
@@ -455,7 +464,7 @@ func (s *Service) AddBook(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if !s.IsLoggedIn(r) {
-		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -463,7 +472,7 @@ func (s *Service) AddBook(rw http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	log.Println(contentType, len(contentType) == 1, contentType[0])
 	if contentType != "application/json" {
-		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -480,7 +489,7 @@ func (s *Service) AddBook(rw http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&newBook)
 	if err != nil {
 		log.Println(err)
-		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -491,8 +500,25 @@ func (s *Service) AddBook(rw http.ResponseWriter, r *http.Request) {
 	book, err := s.store.AddBook(newBook)
 	if err != nil {
 		log.Println(err)
-		http.Error(rw, "{\"status\":\"error\"}", http.StatusBadRequest)
+		http.Error(rw, `{"status":"error"}`, http.StatusBadRequest)
 		return
+	}
+
+	// auto-create a reading for the picked reader, so the new book
+	// shows up in that reader's readings list
+	if newBook.Reader != "" {
+		tz, _ := _buildLocation()
+		reading := &data.Reading{
+			UserID:     userID,
+			ReaderName: newBook.Reader,
+			BookAuthor: book.Authors,
+			BookTitle:  book.Title,
+			Day:        time.Now().In(tz).Format("2006-01-02"),
+		}
+		if err := s.store.AddReading(reading); err != nil {
+			// book is already saved; log but don't fail the request
+			s.l.Printf("AddBook: auto reading for reader %q failed: %v", newBook.Reader, err)
+		}
 	}
 
 	output := struct {

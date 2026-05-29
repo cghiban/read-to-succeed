@@ -630,9 +630,6 @@ func (ds *DataStore) GetUserReaders(userID int) ([]Reader, error) {
 	var err error
 	rows, err = ds.DB.Query(query, userID)
 
-	//fmt.Println(query, userID)
-	// fmt.Printf("%#v", args)
-
 	if err != nil {
 		return readers, err
 	}

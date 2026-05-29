@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html>
     <head>
         <meta charset="UTF-8">
@@ -7,12 +6,11 @@
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <link rel="stylesheet" href="/static/styles.css">
         <title>My Library - Read to Succeed</title>
-<style type="text/css">
+        <style type="text/css">
 @keyframes blinker {
     from {opacity: 1.0;}
     to {opacity: 0.0;}
-  }
-
+}
 .blink {
     text-decoration: blink;
     animation-name: blinker;
@@ -20,37 +18,36 @@
     animation-iteration-count:infinite;
     animation-timing-function:ease-in-out;
     animation-direction: alternate;
-  }
-
+}
 #results img {
 	max-height: 80px;
 	float: left;
 	margin-right: 10px;
 }
-
 #results ul {
-  list-style: none;
-  padding: 0;
+    list-style: none;
+    padding: 0;
 }
-li {
-  padding-left: 1.3em;
-  padding-top: 0.4em;
-  clear:both;
+#results li {
+    padding-left: 1.3em;
+    padding-top: 0.4em;
+    clear:both;
 }
-
-li .snippet {
-  font-size: small;
+#results li .snippet {
+    font-size: small;
 }
-</style>
+        </style>
     </head>
   <body>
+    {{ block "menu_burger" .}}{{end}}
+    {{- /*
     <div class="welcome-center">
       <a href="/library" title="my books"><span class="material-icons">library_books</span></a>
       <a href="/" title="readings"><span class="material-icons">add_circle</span></a>
       <a href="/settings" title="settings"><span class="material-icons">manage_accounts</span></a>
       <a href="/logout"><span class="material-icons">exit_to_app</span></a>
     </div>
-
+    */ -}}
 <div style="overflow-x:auto;">
   <a href="#" id="addbook" title="add book to my libary">add book</a>
   <table>
@@ -85,6 +82,16 @@ li .snippet {
         <h3>Search Book</h3>
 
         <div>
+        {{ if eq (len .Readers) 1 }}
+            <input type="hidden" id="reader" name="reader" value="{{(index .Readers 0).Name}}"/>
+        {{ else }}
+          <select id="reader" name="reader">
+          {{ range $i, $r := .Readers }}
+              <option value="{{$r.Name}}" {{if eq $i 0}}selected{{end}}>{{$r.Name}}</option>
+          {{ end }}
+          </select>
+        {{ end }}
+
           <select id="lang" name="lang">
               <option value="en">English</option>
               <option value="es">Spanish</option>
@@ -199,7 +206,7 @@ window.addEventListener("load", (ev) => {
 		data.forEach(item => {
 			let info = item["volumeInfo"];
 			console.log("\t-", item["id"], "-", info["title"], "~~", info["authors"]);
-            console.log("\t-", item["id"], " ", item["description"], " ----- ", item["searchInfo"]["textSnippet"]);
+            console.log("\t-", item["id"], " ", item["description"], " ----- ", item["searchInfo"]?.["textSnippet"]);
 			let li = document.createElement("li");
 			const newContent = document.createTextNode(
 				(info["authors"] ? info["authors"].join(", ") : "") + " - " + info["title"]
@@ -207,21 +214,18 @@ window.addEventListener("load", (ev) => {
 			let div_title = document.createElement("div");
 			div_title.appendChild(newContent);
 
-            let imgUrl = info["imageLinks"]["smallThumbnail"];
-			if (info["imageLinks"]) {
-				imgUrl = imgUrl ? imgUrl : info["imageLinks"]["thumbnail"];
-				if (imgUrl) {
-					let img = document.createElement("img");
-					img.src = imgUrl.replace("http:", "https:");
-					li.appendChild(img);
-				}
+            let imgUrl = info["imageLinks"]?.["smallThumbnail"] || info["imageLinks"]?.["thumbnail"];
+			if (imgUrl) {
+				let img = document.createElement("img");
+				img.src = imgUrl.replace("http:", "https:");
+				li.appendChild(img);
 			}
 			li.appendChild(div_title);
 			ul.appendChild(li);
 
             let isbn = "";
             try {
-              info["industryIdentifiers"].forEach(ii => {
+              info["industryIdentifiers"]?.forEach(ii => {
                 if (ii["type"] === "ISBN_13") {
                   isbn = ii["identifier"];
                   return;
@@ -230,9 +234,8 @@ window.addEventListener("load", (ev) => {
             } catch(e) {
               console.log(e);
             };
-           	//const description = document.createTextNode(item["description"] || item["searchInfo"]["textSnippet"]),
-            const description = item["description"] || item["searchInfo"]["textSnippet"],
-            		div_description = document.createElement("div");
+            const description = item["description"] || item["searchInfo"]?.["textSnippet"] || "",
+              div_description = document.createElement("div");
 
          	div_description.className = "snippet";
             div_description.innerHTML = description;
@@ -240,34 +243,34 @@ window.addEventListener("load", (ev) => {
          	li.appendChild(div_description);
          	//li.title = info["description"];
 
-      let add_link = document.createElement("a");
-      add_link.appendChild(document.createTextNode("add book"));
-      add_link.href="#";
-			li.appendChild(add_link);
-      add_link.addEventListener("click", (e) => {
-        e.preventDefault();
-        let data = {
-          title: info["title"],
-          authors: info["authors"] ? info["authors"].join(", ") : "",
-          isbn: isbn,
-          thumb_url: imgUrl
-        };
+        let add_link = document.createElement("a");
+        add_link.appendChild(document.createTextNode("add book"));
+        add_link.href="#";
+        li.appendChild(add_link);
+        add_link.addEventListener("click", (e) => {
+          e.preventDefault();
+          let data = {
+            title: info["title"],
+            authors: info["authors"] ? info["authors"].join(", ") : "",
+            isbn: isbn,
+            thumb_url: imgUrl,
+            reader: document.querySelector("#reader").value
+          };
 
-        console.log(data);
-        console.log(JSON.stringify(data));
-        console.log(e.target.style);
+          console.log(data);
+          console.log(JSON.stringify(data));
+          console.log(e.target.style);
 
-        postData("/add_book", data)
-          .then(data => {
-            console.log(data); // JSON data parsed by `data.json()` call)
-            if (data && data.status === "ok") {
-              e.target.style.display = "none";
-              document.querySelector("#myModal").style.display = "none";
-              document.location.reload();
-            }
-          });
-      });
-      //return;
+          postData("/add_book", data)
+            .then(data => {
+              console.log(data); // JSON data parsed by `data.json()` call)
+              if (data && data.status === "ok") {
+                e.target.style.display = "none";
+                document.querySelector("#myModal").style.display = "none";
+                document.location.reload();
+              }
+            });
+        });
 		});
 
 		search_icon.classList.remove('blink');

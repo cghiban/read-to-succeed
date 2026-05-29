@@ -21,6 +21,7 @@ type NewBook struct {
 	Title    string `json:"title"`
 	ThumbURL string `json:"thumb_url"`
 	ISBN     string `json:"isbn"`
+	Reader   string `json:"reader"`
 }
 
 type UpdateBook struct {

@@ -122,7 +122,7 @@ func main() {
 	}
 	// https://www.alexedwards.net/blog/preventing-csrf-in-go
 	// http.CrossOriginProtection
-	// it need go1.25
+	// it needs go1.25
 	csrf := CsrfMiddleware([]byte(*csrfKey))
 	userRouter := sm.Methods("POST", "GET").Subrouter()
 	userRouter.Use(csrf)
@@ -188,16 +188,3 @@ func CsrfMiddleware(key []byte) func(http.Handler) http.Handler {
 		return http.HandlerFunc(fn)
 	}
 }
-
-// func preventCSRF(next http.Handler) http.Handler {
-// 	cop := http.NewCrossOriginProtection()
-
-// 	cop.AddTrustedOrigin("https://foo.example.com")
-
-// 	cop.SetDenyHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		w.WriteHeader(http.StatusBadRequest)
-// 		w.Write([]byte("CSRF check failed"))
-// 	}))
-
-// 	return cop.Handler(next)
-// }

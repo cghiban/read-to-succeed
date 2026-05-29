@@ -4,3 +4,4 @@ db-*
 var/db*
 *.json
 *.sw?
+vendor

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 type Volume struct {
@@ -18,20 +19,21 @@ type Volume struct {
 
 type VolumeInfo struct {
 	Title               string               `json:"title"`
+	Subtitle            string               `json:"subtitle,omitempty"`
 	Authors             []string             `json:"authors"`
-	IndustryIdentifiers []IndustryIdentifier `json:"industryIdentifiers"`
+	IndustryIdentifiers []IndustryIdentifier `json:"industryIdentifiers,omitempty"`
 	Description         string               `json:"description"`
 	PublishedDate       string               `json:"publishedDate"`
 	PrintType           string               `json:"printType"`
 	MainCategory        string               `json:"mainCategory"`
-	Categories          []string             `json:"categories"`
+	Categories          []string             `json:"categories,omitempty"`
 	ImageLinks          ImageLinks           `json:"imageLinks"`
 	Language            string               `json:"language"`
 }
 
 type ImageLinks struct {
 	SmallThumbnail string `json:"smallThumbnail"`
-	Thumbnail      string `json:"small"`
+	Thumbnail      string `json:"thumbnail"`
 }
 
 type VolumeSearchResult struct {
@@ -60,40 +62,38 @@ const (
 	endPoint string = "https://www.googleapis.com/books/v1/volumes"
 )
 
-// curl -sk "https://www.googleapis.com/books/v1/volumes?q=Mihai%20Eminescu&fields=totalItems,kind,items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/subtitle,volumeInfo/description,volumeInfo/imageLinks,volumeInfo/language)
 func DoSearch(query, lang string) VolumeSearchResult {
 
 	if lang == "" {
 		lang = "en"
 	}
-	req, _ := http.NewRequest("GET", endPoint, nil)
-	req.Header.Add("Accept", "application/json")
 
-	//uri := endPoint + "?fields=totalItems,items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/subtitle,volumeInfo/description,volumeInfo/imageLinks,volumeInfo/language)"
-	uri := endPoint + "?projection=lite"
-	uri += "&printType=books"
-	uri += "&lang=" + lang
-	uri += "&q=" + url.QueryEscape(query)
+	apiKey := os.Getenv("GOOGLE_BOOKS_API_KEY")
 
-	req.URL.RawQuery = uri
+	q := url.Values{}
+	if apiKey != "" {
+		q.Set("key", apiKey)
+	}
+	q.Set("projection", "lite")
+	q.Set("printType", "books")
+	q.Set("langRestrict", lang)
+	q.Set("q", query)
+
+	// q.Add("fields", "totalItems,items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/subtitle,volumeInfo/description,volumeInfo/imageLinks,volumeInfo/language)")
+	//    fmt.Println("query:", q.Encode())
+
+	uri := endPoint + "?" + q.Encode()
 	fmt.Println("url:", uri)
 
-	/*
-		q := req.URL.Query()
-		//q.Add("key", "key_from_environment_or_flag")
-		q.Add("q", query)
-		q.Add("fields", "totalItems,items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/subtitle,volumeInfo/description,volumeInfo/imageLinks,volumeInfo/language)")
-		fmt.Println("query:", q.Encode())
-	*/
+	req, _ := http.NewRequest("GET", uri, nil)
+	req.Header.Add("Accept", "application/json")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-
 	if err != nil {
 		fmt.Println("Errored when sending request to the server")
 		return VolumeSearchResult{}
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
@@ -108,10 +108,10 @@ func DoSearch(query, lang string) VolumeSearchResult {
 	}
 
 	var output VolumeSearchResult
-	//respBody, _ := ioutil.ReadAll(resp.Body)
-	//json.Unmarshal(respBody, &output)
-	//fmt.Println(string(respBody))
-	//return VolumeSearchResult{}
+	// respBody, _ := ioutil.ReadAll(resp.Body)
+	// json.Unmarshal(respBody, &output)
+	// fmt.Println(string(respBody))
+	// return VolumeSearchResult{}
 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&output)
